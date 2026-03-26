@@ -25,14 +25,14 @@ jobs:
       - name: Build backend image
         run: |
           docker build -t ai-points-backend:latest -f ./backend/Dockerfile .
-          docker save ai-points-backend:latest | gzip > /tmp/backend.tar.gz
-          ls -lh /tmp/backend.tar.gz
+          docker save ai-points-backend:latest | gzip > backend.tar.gz
+          ls -lh backend.tar.gz
 
       - name: Build frontend image
         run: |
           docker build -t ai-points-frontend:latest -f ./frontend/Dockerfile .
-          docker save ai-points-frontend:latest | gzip > /tmp/frontend.tar.gz
-          ls -lh /tmp/frontend.tar.gz
+          docker save ai-points-frontend:latest | gzip > frontend.tar.gz
+          ls -lh frontend.tar.gz
 
       - name: Transfer images to server
         uses: appleboy/scp-action@v0.1.7
@@ -40,9 +40,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "/tmp/backend.tar.gz,/tmp/frontend.tar.gz"
+          source: "backend.tar.gz,frontend.tar.gz"
           target: "/tmp"
-          strip_components: 2
 
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
@@ -75,9 +74,9 @@ jobs:
 
             # Load pre-built images from SCP'd tarballs
             echo "Loading backend image..."
-            sudo docker load < /tmp/backend.tar.gz
+            sudo docker load < /tmp/ai-points-platform/backend.tar.gz
             echo "Loading frontend image..."
-            sudo docker load < /tmp/frontend.tar.gz
+            sudo docker load < /tmp/ai-points-platform/frontend.tar.gz
 
             # Tag for docker-compose.prod.yml image names
             sudo docker tag ai-points-backend:latest ghcr.io/infinity-light/ai-points-backend:latest
@@ -129,7 +128,7 @@ jobs:
               node_modules/.bin/typeorm migration:run -d dist/database/data-source.js
 
             # Cleanup
-            rm -f /tmp/backend.tar.gz /tmp/frontend.tar.gz
+            rm -rf /tmp/ai-points-platform/
             sudo docker image prune -f
             echo "Deployment complete"
 
