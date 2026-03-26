@@ -1,7 +1,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-RUN npm install -g pnpm
+# Use China mirrors for Alpine and npm
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN npm install -g pnpm --registry https://registry.npmmirror.com
+RUN pnpm config set registry https://registry.npmmirror.com
 
 # Copy workspace manifests for dependency caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -17,13 +20,17 @@ RUN pnpm build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Use China mirrors for Alpine and npm
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # Build tools needed for native modules (bcrypt uses node-gyp on Alpine/musl)
 RUN apk add --no-cache python3 make g++
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm --registry https://registry.npmmirror.com
+RUN pnpm config set registry https://registry.npmmirror.com
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-# Remove 'prepare' lifecycle (husky) before prod install — not needed in Docker
+# Remove 'prepare' lifecycle (husky) before prod install
 COPY backend/package.json /tmp/backend.orig.json
 RUN node -e " \
   const fs = require('fs'); \

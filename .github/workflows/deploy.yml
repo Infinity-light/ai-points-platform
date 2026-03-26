@@ -7,10 +7,11 @@ on:
 
 env:
   DEPLOY_DIR: /opt/apps/ai-points-platform
+  SRC_DIR: /opt/apps/ai-points-src
 
 jobs:
-  build-and-deploy:
-    name: Build Images & Deploy
+  deploy:
+    name: Deploy to Server
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,40 +20,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build backend image
+      - name: Archive source code
         run: |
-          docker build -t ai-points-backend:latest -f ./backend/Dockerfile .
-          docker save ai-points-backend:latest | gzip > backend.tar.gz
-          ls -lh backend.tar.gz
+          git archive HEAD -o source.tar.gz
+          ls -lh source.tar.gz
 
-      - name: Build frontend image
-        run: |
-          docker build -t ai-points-frontend:latest -f ./frontend/Dockerfile .
-          docker save ai-points-frontend:latest | gzip > frontend.tar.gz
-          ls -lh frontend.tar.gz
-
-      - name: Transfer images to server
+      - name: Transfer source to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "backend.tar.gz,frontend.tar.gz"
-          target: "/tmp"
+          source: "source.tar.gz,docker-compose.prod.yml"
+          target: /tmp/deploy
 
-      - name: Copy compose file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: docker-compose.prod.yml
-          target: ${{ env.DEPLOY_DIR }}
-
-      - name: Deploy on server
+      - name: Build and deploy on server
         uses: appleboy/ssh-action@v1
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -65,22 +47,39 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,LLM_API_KEY,SMTP_PASS
-          command_timeout: 30m
+          command_timeout: 45m
           script: |
             set -e
 
             # Ensure ubuntu can use docker
             sudo usermod -aG docker ubuntu || true
 
-            # Load pre-built images from SCP'd tarballs
-            echo "Loading backend image..."
-            sudo docker load < /tmp/ai-points-platform/backend.tar.gz
-            echo "Loading frontend image..."
-            sudo docker load < /tmp/ai-points-platform/frontend.tar.gz
+            # Extract source to build directory
+            sudo rm -rf ${{ env.SRC_DIR }}
+            sudo mkdir -p ${{ env.SRC_DIR }}
+            sudo tar xzf /tmp/deploy/source.tar.gz -C ${{ env.SRC_DIR }}
+            sudo chown -R ubuntu:ubuntu ${{ env.SRC_DIR }}
 
-            # Tag for docker-compose.prod.yml image names
+            # Build backend image on server (uses China mirrors configured in Dockerfile)
+            echo "Building backend image..."
+            sudo docker build -t ai-points-backend:latest \
+              -f ${{ env.SRC_DIR }}/backend/Dockerfile \
+              ${{ env.SRC_DIR }}
+
+            # Build frontend image on server
+            echo "Building frontend image..."
+            sudo docker build -t ai-points-frontend:latest \
+              -f ${{ env.SRC_DIR }}/frontend/Dockerfile \
+              ${{ env.SRC_DIR }}
+
+            # Tag for docker-compose.prod.yml
             sudo docker tag ai-points-backend:latest ghcr.io/infinity-light/ai-points-backend:latest
             sudo docker tag ai-points-frontend:latest ghcr.io/infinity-light/ai-points-frontend:latest
+
+            # Setup deploy directory and compose file
+            sudo mkdir -p ${{ env.DEPLOY_DIR }}
+            sudo cp /tmp/deploy/docker-compose.prod.yml ${{ env.DEPLOY_DIR }}/docker-compose.prod.yml
+            sudo chown ubuntu:ubuntu ${{ env.DEPLOY_DIR }}/docker-compose.prod.yml
 
             # Write .env
             cd ${{ env.DEPLOY_DIR }}
@@ -107,7 +106,7 @@ jobs:
             printf 'LLM_API_KEY=%s\n' "$LLM_API_KEY" >> .env
             printf 'SMTP_PASS=%s\n' "$SMTP_PASS" >> .env
 
-            # Start / update all services (no pull needed — images are loaded)
+            # Start / update all services (images already built above)
             sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans --no-pull
 
             # Wait for backend to be healthy (up to 90s)
@@ -128,7 +127,7 @@ jobs:
               node_modules/.bin/typeorm migration:run -d dist/database/data-source.js
 
             # Cleanup
-            rm -rf /tmp/ai-points-platform/
+            rm -rf /tmp/deploy
             sudo docker image prune -f
             echo "Deployment complete"
 
