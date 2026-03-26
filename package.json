@@ -1,0 +1,16 @@
+{
+  "name": "ai-points-platform",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "test": "pnpm --filter backend test",
+    "type-check": "pnpm --filter backend type-check && pnpm --filter frontend type-check",
+    "lint": "pnpm --filter backend lint && pnpm --filter frontend lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

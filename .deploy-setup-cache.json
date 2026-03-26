@@ -1,0 +1,51 @@
+{
+  "project": {
+    "name": "ai-points-platform",
+    "type": "docker-monorepo",
+    "port": 4100,
+    "startCmd": "docker compose -f docker-compose.prod.yml up -d"
+  },
+  "server": {
+    "host": "47.98.171.82",
+    "user": "root",
+    "sshKeyPath": "~/.ssh/id_rsa",
+    "deployDir": "/opt/apps"
+  },
+  "domain": {
+    "enabled": true,
+    "name": "points.godpenai.com",
+    "https": true
+  },
+  "strategy": {
+    "buildLocation": "ci",
+    "transferMethod": "scp",
+    "mirrors": {
+      "alpine": "mirrors.aliyun.com",
+      "npm": "registry.npmmirror.com"
+    },
+    "needsBuildTools": true
+  },
+  "mirrors": true,
+  "nativeModules": [
+    "bcrypt"
+  ],
+  "secrets": [
+    "DB_PASSWORD",
+    "JWT_SECRET",
+    "JWT_REFRESH_SECRET",
+    "LLM_API_KEY",
+    "SMTP_PASS"
+  ],
+  "branches": {
+    "production": "main"
+  },
+  "database": {
+    "type": "postgres",
+    "location": "container",
+    "dataDir": "/opt/apps/ai-points-platform/data",
+    "initCmd": "",
+    "migrateCmd": "docker compose -f docker-compose.prod.yml exec -T backend node dist/main --migrate",
+    "createAdmin": false,
+    "adminCmd": ""
+  }
+}

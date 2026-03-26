@@ -1,0 +1,30 @@
+services:
+  ai-points-platform:
+    build: .
+    container_name: ai-points-platform
+    restart: unless-stopped
+
+
+    ports:
+      - "4100:4100"
+
+    env_file:
+      - path: .env
+        required: false
+
+    volumes:
+      - ai-points-platform-data:/app//opt/apps/ai-points-platform/data
+
+
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+
+
+volumes:
+  ai-points-platform-data:
+
