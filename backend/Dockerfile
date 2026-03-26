@@ -41,6 +41,15 @@ RUN node -e " \
 "
 COPY frontend/package.json ./frontend/
 
+# Allow native module build scripts (bcrypt, msgpackr-extract need to compile)
+RUN node -e "\
+  const fs=require('fs');\
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));\
+  pkg.pnpm=pkg.pnpm||{};\
+  pkg.pnpm.onlyBuiltDependencies=['bcrypt','msgpackr-extract','unrs-resolver'];\
+  fs.writeFileSync('package.json',JSON.stringify(pkg,null,2));\
+"
+
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/backend/dist /app/backend/dist

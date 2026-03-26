@@ -107,7 +107,7 @@ jobs:
             printf 'SMTP_PASS=%s\n' "$SMTP_PASS" >> .env
 
             # Start / update all services (images already built above)
-            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans --no-pull
+            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans --pull never
 
             # Wait for backend to be healthy (up to 90s)
             echo "Waiting for backend..."
