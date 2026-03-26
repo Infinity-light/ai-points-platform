@@ -96,4 +96,29 @@ export class PointsService {
 
     return activePointsByUser;
   }
+
+  async getMySummary(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ totalPoints: number; activePoints: number; monthlyPoints: number }> {
+    const records = await this.pointRepository.find({
+      where: { tenantId, userId },
+    });
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let totalPoints = 0;
+    let monthlyPoints = 0;
+
+    for (const record of records) {
+      totalPoints += record.originalPoints;
+      if (record.createdAt >= startOfMonth) {
+        monthlyPoints += record.originalPoints;
+      }
+    }
+
+    // activePoints: simplified — use totalPoints (annealing requires per-project round context)
+    return { totalPoints, activePoints: totalPoints, monthlyPoints };
+  }
 }
