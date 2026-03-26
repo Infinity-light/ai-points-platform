@@ -93,8 +93,11 @@ jobs:
             set -e
             cd /opt/apps/ai-points-platform
 
+            # Ensure ubuntu is in docker group (takes effect immediately for new exec)
+            sudo usermod -aG docker ubuntu || true
+
             # Login to GHCR to pull private images
-            echo "$GHCR_PAT" | docker login ghcr.io -u infinity-light --password-stdin
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u infinity-light --password-stdin
 
             # Write .env (static vars first, secrets appended via printf to avoid injection)
             cat > .env << 'ENVEOF'
@@ -121,10 +124,10 @@ jobs:
             printf 'SMTP_PASS=%s\n' "$SMTP_PASS" >> .env
 
             # Pull latest images from GHCR
-            docker compose -f docker-compose.prod.yml pull
+            sudo docker compose -f docker-compose.prod.yml pull
 
             # Start / update all services
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             # Wait for backend to be healthy (up to 60s)
             echo "Waiting for backend..."
@@ -140,11 +143,11 @@ jobs:
 
             # Run database migrations
             echo "Running migrations..."
-            docker compose -f docker-compose.prod.yml exec -T backend \
+            sudo docker compose -f docker-compose.prod.yml exec -T backend \
               node_modules/.bin/typeorm migration:run -d dist/database/data-source.js
 
             # Remove dangling images
-            docker image prune -f
+            sudo docker image prune -f
             echo "Deployment complete"
 
       - name: Health check
@@ -164,5 +167,5 @@ jobs:
               sleep 5
             done
             echo "Health check failed — recent logs:"
-            docker compose -f /opt/apps/ai-points-platform/docker-compose.prod.yml logs --tail 50
+            sudo docker compose -f /opt/apps/ai-points-platform/docker-compose.prod.yml logs --tail 50
             exit 1
