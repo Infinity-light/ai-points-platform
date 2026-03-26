@@ -6,67 +6,43 @@ on:
       - master
 
 env:
-  BACKEND_IMAGE: ghcr.io/infinity-light/ai-points-backend
-  FRONTEND_IMAGE: ghcr.io/infinity-light/ai-points-frontend
   DEPLOY_DIR: /opt/apps/ai-points-platform
 
 jobs:
-  build:
-    name: Build & Push Docker Images
+  build-and-deploy:
+    name: Build Images & Deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
+      - name: Build backend image
+        run: |
+          docker build -t ai-points-backend:latest -f ./backend/Dockerfile .
+          docker save ai-points-backend:latest | gzip > /tmp/backend.tar.gz
+          ls -lh /tmp/backend.tar.gz
+
+      - name: Build frontend image
+        run: |
+          docker build -t ai-points-frontend:latest -f ./frontend/Dockerfile .
+          docker save ai-points-frontend:latest | gzip > /tmp/frontend.tar.gz
+          ls -lh /tmp/frontend.tar.gz
+
+      - name: Transfer images to server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          context: .
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./frontend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
-
-  deploy:
-    name: Deploy to Server
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "/tmp/backend.tar.gz,/tmp/frontend.tar.gz"
+          target: "/tmp"
+          strip_components: 2
 
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
@@ -80,7 +56,6 @@ jobs:
       - name: Deploy on server
         uses: appleboy/ssh-action@v1
         env:
-          GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
@@ -90,19 +65,26 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GHCR_PAT,DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,LLM_API_KEY,SMTP_PASS
-          command_timeout: 15m
+          envs: DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,LLM_API_KEY,SMTP_PASS
+          command_timeout: 30m
           script: |
             set -e
-            cd /opt/apps/ai-points-platform
 
-            # Ensure ubuntu is in docker group (takes effect immediately for new exec)
+            # Ensure ubuntu can use docker
             sudo usermod -aG docker ubuntu || true
 
-            # Login to GHCR to pull private images (GHCR_PAT is the workflow GITHUB_TOKEN)
-            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Load pre-built images from SCP'd tarballs
+            echo "Loading backend image..."
+            sudo docker load < /tmp/backend.tar.gz
+            echo "Loading frontend image..."
+            sudo docker load < /tmp/frontend.tar.gz
 
-            # Write .env (static vars first, secrets appended via printf to avoid injection)
+            # Tag for docker-compose.prod.yml image names
+            sudo docker tag ai-points-backend:latest ghcr.io/infinity-light/ai-points-backend:latest
+            sudo docker tag ai-points-frontend:latest ghcr.io/infinity-light/ai-points-frontend:latest
+
+            # Write .env
+            cd ${{ env.DEPLOY_DIR }}
             cat > .env << 'ENVEOF'
             NODE_ENV=production
             PORT=3000
@@ -126,21 +108,18 @@ jobs:
             printf 'LLM_API_KEY=%s\n' "$LLM_API_KEY" >> .env
             printf 'SMTP_PASS=%s\n' "$SMTP_PASS" >> .env
 
-            # Pull latest images from GHCR
-            sudo docker compose -f docker-compose.prod.yml pull
+            # Start / update all services (no pull needed — images are loaded)
+            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans --no-pull
 
-            # Start / update all services
-            sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            # Wait for backend to be healthy (up to 60s)
+            # Wait for backend to be healthy (up to 90s)
             echo "Waiting for backend..."
-            for i in $(seq 1 12); do
+            for i in $(seq 1 18); do
               STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/health || true)
               if [ "$STATUS" = "200" ]; then
-                echo "Backend healthy"
+                echo "Backend healthy after $i attempts"
                 break
               fi
-              echo "  attempt $i/12: HTTP $STATUS, waiting 5s..."
+              echo "  attempt $i/18: HTTP $STATUS, waiting 5s..."
               sleep 5
             done
 
@@ -149,7 +128,8 @@ jobs:
             sudo docker compose -f docker-compose.prod.yml exec -T backend \
               node_modules/.bin/typeorm migration:run -d dist/database/data-source.js
 
-            # Remove dangling images
+            # Cleanup
+            rm -f /tmp/backend.tar.gz /tmp/frontend.tar.gz
             sudo docker image prune -f
             echo "Deployment complete"
 
