@@ -60,6 +60,9 @@ jobs:
     name: Deploy to Server
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
@@ -77,7 +80,7 @@ jobs:
       - name: Deploy on server
         uses: appleboy/ssh-action@v1
         env:
-          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
@@ -96,8 +99,8 @@ jobs:
             # Ensure ubuntu is in docker group (takes effect immediately for new exec)
             sudo usermod -aG docker ubuntu || true
 
-            # Login to GHCR to pull private images
-            echo "$GHCR_PAT" | sudo docker login ghcr.io -u infinity-light --password-stdin
+            # Login to GHCR to pull private images (GHCR_PAT is the workflow GITHUB_TOKEN)
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Write .env (static vars first, secrets appended via printf to avoid injection)
             cat > .env << 'ENVEOF'
