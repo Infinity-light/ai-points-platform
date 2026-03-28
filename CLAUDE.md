@@ -74,24 +74,36 @@ tenant_id 字段隔离（非 schema 隔离）。每张业务表有 `tenantId UUI
 
 ### 工分退火
 
-阶梯退火，每3次结算衰减一档：
+阶梯退火，每 `cyclesPerStep` 次结算进一档，指数衰减：
 ```
-活跃工分 = 原始工分 × (1 / n)
-n = ceil((当前轮次 - 获得轮次) / 3) + 1
+tier = floor((currentRound - acquiredRound) / cyclesPerStep)
+活跃工分 = floor(原始工分 / 3^tier)
+tier >= maxSteps 时清零
 ```
+默认配置：`cyclesPerStep=3, maxSteps=4` → 12 次结算后清零（tier 0→1→2→3→清零）。
 实现在 `backend/src/points/annealing.ts`，有完整单元测试 `annealing.spec.ts`。
+
+**Migration 014**：修复旧项目默认 `maxSteps=9`（错误）→ `4`（正确）。
 
 ### AI 评审
 
-三维度评分：调查(0-5) / 规划(0-5) / 执行(0-5)，总分15。每次提交触发3次 LLM 调用取均值，Prompt 不传提交人姓名以去主观化。
+三维度评分：调查(0-5) / 规划(0-5) / 执行(0-5)，总分15。每次提交触发3次 LLM 调用：
+- 成功调用结果取均值
+- 部分失败：跳过失败结果，用成功结果均值
+- 全部失败：抛出异常，任务重新入队
+- Prompt 不传提交人姓名以去主观化
+
+**结算积分公式**：`finalPoints = max(1, round(estimatedPoints × aiTotal/15))`，AI 质量得分决定最终发放量。
 
 ### CI/CD — server-build 策略
 
-**为什么选 server-build 而不是 GHCR pull**：腾讯云上海拉取 GHCR 镜像速度约 30KB/s（国际带宽限速），不可用。改为：
+**为什么选 server-build 而不是 GHCR pull**：阿里云杭州拉取 GHCR 镜像受国际带宽限速，不可用。改为：
 1. `git archive HEAD -o source.tar.gz` 打包源码（约 600KB）
 2. SCP 到服务器 `/tmp/deploy/`
 3. SSH 在服务器上 `docker build`（使用阿里云 Alpine 镜像 + npmmirror.com）
 4. `docker compose up --pull never`（镜像已本地构建，不拉取）
+5. 运行 TypeORM 迁移（自动）
+6. 配置 Nginx 反代 + 申请/续期 Let's Encrypt SSL（幂等，base64 编码规避 YAML heredoc 问题）
 
 ### Dockerfile 关键设计
 
@@ -117,8 +129,9 @@ n = ceil((当前轮次 - 获得轮次) / 3) + 1
 
 - `GET /points/my-summary`（需 JWT）：返回 `{ totalPoints, activePoints, monthlyPoints }`
 - `totalPoints`：该用户在当前租户下所有原始工分之和
-- `activePoints`：当前版本等同 totalPoints（精确退火需 per-project 结算轮次）
+- `activePoints`：基于各 project 当前 `settlementRound` + `annealingConfig` 计算真实退火后工分之和
 - `monthlyPoints`：当月新增原始工分
+- 实现注入 `ProjectRepository`，按 projectId 批量拉取配置后逐条计算
 
 ### brain 模块
 
