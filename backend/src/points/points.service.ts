@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PointRecord, PointSource } from './entities/point-record.entity';
+import { Project } from '../project/entities/project.entity';
 import { calculateActivePoints } from './annealing';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class PointsService {
   constructor(
     @InjectRepository(PointRecord)
     private readonly pointRepository: Repository<PointRecord>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
   ) {}
 
   async awardPoints(
@@ -105,20 +108,45 @@ export class PointsService {
       where: { tenantId, userId },
     });
 
+    // Load projects to get per-project settlement round and annealing config
+    const projectIds = [...new Set(records.map((r) => r.projectId))];
+    const projects =
+      projectIds.length > 0
+        ? await this.projectRepository.find({
+            where: { id: In(projectIds), tenantId },
+          })
+        : [];
+    const projectMap = new Map(projects.map((p) => [p.id, p]));
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     let totalPoints = 0;
+    let activePoints = 0;
     let monthlyPoints = 0;
 
     for (const record of records) {
       totalPoints += record.originalPoints;
+
+      const project = projectMap.get(record.projectId);
+      if (project) {
+        activePoints += calculateActivePoints({
+          originalPoints: record.originalPoints,
+          acquiredRound: record.acquiredRound,
+          currentRound: project.settlementRound,
+          cyclesPerStep: project.annealingConfig.cyclesPerStep,
+          maxSteps: project.annealingConfig.maxSteps,
+        });
+      } else {
+        // Project not found (archived/deleted) — treat as full points to avoid data loss
+        activePoints += record.originalPoints;
+      }
+
       if (record.createdAt >= startOfMonth) {
         monthlyPoints += record.originalPoints;
       }
     }
 
-    // activePoints: simplified — use totalPoints (annealing requires per-project round context)
-    return { totalPoints, activePoints: totalPoints, monthlyPoints };
+    return { totalPoints, activePoints, monthlyPoints };
   }
 }

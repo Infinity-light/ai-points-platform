@@ -104,7 +104,7 @@ describe('SubmissionService', () => {
     });
 
     it('任务状态不是 CLAIMED 时应该抛出 BadRequestException', async () => {
-      taskService.findOne!.mockResolvedValue({ ...mockTask, status: TaskStatus.OPEN, assigneeId: 'user-uuid' } as any);
+      (taskService.findOne as jest.Mock).mockResolvedValue({ ...mockTask, status: TaskStatus.OPEN, assigneeId: 'user-uuid' } as any);
       await expect(
         service.create('tenant-uuid', 'user-uuid', {
           taskId: 'task-uuid',
