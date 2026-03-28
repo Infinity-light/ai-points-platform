@@ -72,12 +72,11 @@ describe('AiService', () => {
     expect(result.execution).toBeLessThanOrEqual(5);
   });
 
-  it('应该在 LLM 失败时返回零分（降级）', async () => {
-    // Override all 3 calls to fail
+  it('部分调用失败时应跳过失败结果并用成功结果取均值', async () => {
     mockCreate
       .mockRejectedValueOnce(new Error('API Error'))
-      .mockRejectedValueOnce(new Error('API Error'))
-      .mockRejectedValueOnce(new Error('API Error'));
+      .mockResolvedValueOnce({ content: [{ type: 'text', text: '{"research":4,"planning":4,"execution":4}' }] })
+      .mockResolvedValueOnce({ content: [{ type: 'text', text: '{"research":2,"planning":2,"execution":2}' }] });
 
     const result = await service.reviewSubmission({
       taskTitle: 'test',
@@ -86,12 +85,26 @@ describe('AiService', () => {
       submissionType: 'ai-exec',
     });
 
-    // callLlmOnce catches errors and returns 0,0,0
-    expect(result).toBeDefined();
-    expect(result.rawScores).toHaveLength(3);
-    expect(result.research).toBe(0);
-    expect(result.planning).toBe(0);
-    expect(result.execution).toBe(0);
-    expect(result.average).toBe(0);
+    // Only 2 successful calls: {4,4,4} and {2,2,2} → average = 3
+    expect(result.rawScores).toHaveLength(2);
+    expect(result.research).toBe(3);
+    expect(result.planning).toBe(3);
+    expect(result.execution).toBe(3);
+  });
+
+  it('三次调用均失败时应抛出错误（让队列重试）', async () => {
+    mockCreate
+      .mockRejectedValueOnce(new Error('API Error'))
+      .mockRejectedValueOnce(new Error('API Error'))
+      .mockRejectedValueOnce(new Error('API Error'));
+
+    await expect(
+      service.reviewSubmission({
+        taskTitle: 'test',
+        taskDescription: null,
+        submissionContent: 'content',
+        submissionType: 'ai-exec',
+      }),
+    ).rejects.toThrow('AI 评审失败：3 次调用均未成功');
   });
 });

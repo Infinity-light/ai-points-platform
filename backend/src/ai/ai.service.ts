@@ -59,19 +59,24 @@ export class AiService {
   async reviewSubmission(input: ReviewInput): Promise<TaskScoreResult> {
     const userMessage = this.buildUserMessage(input);
 
-    // Call LLM 3 times for stability
+    // Call LLM 3 times; collect only successful results
     const rawScores: Array<{ research: number; planning: number; execution: number }> = [];
-
     for (let i = 0; i < 3; i++) {
       const score = await this.callLlmOnce(userMessage);
-      rawScores.push(score);
+      if (score !== null) {
+        rawScores.push(score);
+      }
     }
 
-    // Average the 3 calls
-    const research = Math.round((rawScores[0].research + rawScores[1].research + rawScores[2].research) / 3 * 10) / 10;
-    const planning = Math.round((rawScores[0].planning + rawScores[1].planning + rawScores[2].planning) / 3 * 10) / 10;
-    const execution = Math.round((rawScores[0].execution + rawScores[1].execution + rawScores[2].execution) / 3 * 10) / 10;
-    const average = Math.round((research + planning + execution) / 3 * 10) / 10;
+    if (rawScores.length === 0) {
+      throw new Error('AI 评审失败：3 次调用均未成功，任务将重新入队');
+    }
+
+    const count = rawScores.length;
+    const research = Math.round((rawScores.reduce((s, r) => s + r.research, 0) / count) * 10) / 10;
+    const planning = Math.round((rawScores.reduce((s, r) => s + r.planning, 0) / count) * 10) / 10;
+    const execution = Math.round((rawScores.reduce((s, r) => s + r.execution, 0) / count) * 10) / 10;
+    const average = Math.round(((research + planning + execution) / 3) * 10) / 10;
 
     return { research, planning, execution, average, rawScores };
   }
@@ -95,7 +100,9 @@ ${input.submissionContent}
 请对以上工作成果进行三维度评分，返回 JSON。`;
   }
 
-  private async callLlmOnce(userMessage: string): Promise<{ research: number; planning: number; execution: number }> {
+  private async callLlmOnce(
+    userMessage: string,
+  ): Promise<{ research: number; planning: number; execution: number } | null> {
     try {
       const response = await this.client.messages.create({
         model: this.model,
@@ -120,8 +127,7 @@ ${input.submissionContent}
       };
     } catch (error) {
       this.logger.error(`LLM call failed: ${String(error)}`);
-      // Fallback: return middle scores (don't fail silently in production but don't crash)
-      return { research: 0, planning: 0, execution: 0 };
+      return null;
     }
   }
 }

@@ -14,7 +14,7 @@ export enum ProjectStatus {
 
 export interface AnnealingConfig {
   cyclesPerStep: number; // 每档需要经历的结算次数，默认3
-  maxSteps: number;      // 最大档数（超过后清零），默认9 → 约27次结算后清零
+  maxSteps: number;      // 最大档数（tier >= maxSteps 时清零），默认4 → 12次结算后清零
 }
 
 export interface SettlementConfig {
@@ -42,7 +42,7 @@ export class Project {
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.ACTIVE })
   status!: ProjectStatus;
 
-  @Column({ type: 'jsonb', default: { cyclesPerStep: 3, maxSteps: 9 } })
+  @Column({ type: 'jsonb', default: { cyclesPerStep: 3, maxSteps: 4 } })
   annealingConfig!: AnnealingConfig;
 
   @Column({ type: 'jsonb', default: { periodType: 'weekly', dayOfWeek: 1 } })

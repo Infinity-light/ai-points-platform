@@ -56,7 +56,24 @@ export class SettlementService {
     for (const taskId of session.taskIds) {
       try {
         const task = await this.taskService.findOne(taskId, tenantId);
-        const finalPoints = task.estimatedPoints ?? 10; // Default 10 points if not set
+
+        // Derive final points from AI scores when available.
+        // Formula: estimatedPoints × (aiTotal / 15), min 1 point.
+        // Fallback: estimatedPoints when AI review was skipped or failed.
+        const aiScores = task.metadata.aiScores;
+        let finalPoints: number;
+        if (
+          aiScores &&
+          typeof aiScores.research === 'number' &&
+          typeof aiScores.planning === 'number' &&
+          typeof aiScores.execution === 'number'
+        ) {
+          const aiTotal = aiScores.research + aiScores.planning + aiScores.execution; // 0–15
+          const qualityRatio = aiTotal / 15;
+          finalPoints = Math.max(1, Math.round((task.estimatedPoints ?? 10) * qualityRatio));
+        } else {
+          finalPoints = task.estimatedPoints ?? 10;
+        }
 
         // Settle the task
         await this.taskService.settle(taskId, tenantId, finalPoints);
