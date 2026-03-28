@@ -126,6 +126,35 @@ jobs:
             sudo docker compose -f docker-compose.prod.yml exec -T backend \
               node_modules/.bin/typeorm migration:run -d dist/database/data-source.js
 
+            # Configure Nginx reverse proxy (idempotent)
+            echo "Configuring Nginx..."
+            sudo apt-get install -y -q nginx certbot python3-certbot-nginx
+
+            sudo tee /etc/nginx/sites-available/points.godpenai.com > /dev/null << 'NGINXEOF'
+server {
+    listen 80;
+    server_name points.godpenai.com;
+    client_max_body_size 50m;
+    location / {
+        proxy_pass http://127.0.0.1:4100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+    }
+}
+NGINXEOF
+
+            sudo ln -sf /etc/nginx/sites-available/points.godpenai.com \
+              /etc/nginx/sites-enabled/points.godpenai.com
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Obtain / renew SSL certificate (non-interactive, skips if already valid)
+            sudo certbot --nginx -d points.godpenai.com \
+              --non-interactive --agree-tos \
+              --email admin@godpenai.com \
+              --redirect || echo "Certbot skipped (already valid or rate-limited)"
+
             # Cleanup
             rm -rf /tmp/deploy
             sudo docker image prune -f
