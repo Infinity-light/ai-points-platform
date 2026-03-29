@@ -34,7 +34,7 @@ export class Skill {
   @Column('text')
   description!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   category!: string | null;
 
   @Column({ default: 1 })
