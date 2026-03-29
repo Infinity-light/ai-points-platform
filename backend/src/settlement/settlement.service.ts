@@ -3,13 +3,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Settlement } from './entities/settlement.entity';
 import { VoteService } from '../vote/vote.service';
 import { VoteSessionStatus } from '../vote/entities/vote-session.entity';
 import { TaskService } from '../task/task.service';
 import { PointsService } from '../points/points.service';
+import { PoolStatus } from '../points/entities/point-record.entity';
 import { ProjectService } from '../project/project.service';
+import { DividendService } from '../dividend/dividend.service';
+import { User } from '../user/entities/user.entity';
 
 // Re-export for use by controller
 export { Settlement };
@@ -19,10 +22,13 @@ export class SettlementService {
   constructor(
     @InjectRepository(Settlement)
     private readonly settlementRepository: Repository<Settlement>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly voteService: VoteService,
     private readonly taskService: TaskService,
     private readonly pointsService: PointsService,
     private readonly projectService: ProjectService,
+    private readonly dividendService: DividendService,
   ) {}
 
   /**
@@ -88,6 +94,7 @@ export class SettlementService {
             newRound, // Acquired at this new round
             taskId,
             voteSessionId,
+            PoolStatus.PROJECT_ONLY,
           );
           totalPointsAwarded += finalPoints;
           affectedUsers.add(task.assigneeId);
@@ -114,7 +121,41 @@ export class SettlementService {
       },
     });
 
-    return this.settlementRepository.save(settlement);
+    const savedSettlement = await this.settlementRepository.save(settlement);
+
+    // 5. Create dividend draft for this settlement round
+    try {
+      const members = await this.projectService.getMembers(project.id, tenantId);
+      const memberUserIds = members.map((m) => m.userId);
+
+      const memberActivePoints = await this.pointsService.getAllMembersActivePoints(
+        tenantId,
+        project.id,
+        memberUserIds,
+        newRound,
+        project.annealingConfig.cyclesPerStep,
+        project.annealingConfig.maxSteps,
+      );
+
+      const users = memberUserIds.length > 0
+        ? await this.userRepository.find({ where: { id: In(memberUserIds), tenantId } })
+        : [];
+      const userNames = new Map(users.map((u) => [u.id, u.name]));
+
+      await this.dividendService.createDraft({
+        tenantId,
+        projectId: project.id,
+        settlementId: savedSettlement.id,
+        roundNumber: newRound,
+        memberActivePoints,
+        userNames,
+      });
+    } catch (err) {
+      // Non-fatal: dividend draft creation failure should not block settlement
+      console.error('Failed to create dividend draft after settlement:', err);
+    }
+
+    return savedSettlement;
   }
 
   async findForProject(tenantId: string, projectId: string): Promise<Settlement[]> {

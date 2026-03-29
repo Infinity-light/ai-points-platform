@@ -1,35 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { projectApi, type Project } from '@/services/project';
 import { useAuthStore } from '@/stores/auth';
+import { pointsApi, type MyProjectPoints } from '@/services/points';
 
 const authStore = useAuthStore();
 
-const projects = ref<Project[]>([]);
 const loading = ref(true);
-
-interface ProjectPoints {
-  projectId: string;
-  projectName: string;
-  originalTotal: number;
-  activeTotal: number;
-  currentRound: number;
-}
-
-const projectPoints = ref<ProjectPoints[]>([]);
+const error = ref('');
+const projectPoints = ref<MyProjectPoints[]>([]);
 
 onMounted(async () => {
   try {
-    const res = await projectApi.list(true);
-    projects.value = res.data;
-    // Build placeholder points data — will be replaced with real Points API
-    projectPoints.value = res.data.map((p) => ({
-      projectId: p.id,
-      projectName: p.name,
-      originalTotal: 0,
-      activeTotal: 0,
-      currentRound: p.settlementRound,
-    }));
+    const res = await pointsApi.getMyProjects();
+    projectPoints.value = res.data;
+  } catch {
+    error.value = '加载工分数据失败，请刷新重试';
   } finally {
     loading.value = false;
   }
@@ -62,6 +47,14 @@ const roleLabels: Record<string, string> = {
     </div>
 
     <template v-else>
+      <!-- Error -->
+      <div
+        v-if="error"
+        class="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg mb-6"
+      >
+        {{ error }}
+      </div>
+
       <!-- User info card -->
       <div class="bg-card border border-border rounded-xl p-6 mb-6">
         <div class="flex items-center gap-4">
@@ -133,7 +126,7 @@ const roleLabels: Record<string, string> = {
             <p class="font-medium text-sm text-foreground">{{ pp.projectName }}</p>
             <span class="text-xs text-muted-foreground">第 {{ pp.currentRound }} 结算轮</span>
           </div>
-          <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="grid grid-cols-2 gap-3 text-center mb-3">
             <div class="bg-muted/50 rounded-md py-2">
               <p class="text-lg font-bold text-foreground">{{ pp.originalTotal }}</p>
               <p class="text-xs text-muted-foreground">历史工分</p>
@@ -143,6 +136,25 @@ const roleLabels: Record<string, string> = {
               <p class="text-xs text-muted-foreground">活跃工分</p>
             </div>
           </div>
+
+          <!-- 入池状态统计 -->
+          <div class="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-2 mt-1">
+            <span class="flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              已入池 {{ pp.approvedCount }}
+            </span>
+            <span class="text-border">·</span>
+            <span class="flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+              待审批 {{ pp.pendingCount }}
+            </span>
+            <span class="text-border">·</span>
+            <span class="flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block" />
+              项目内 {{ pp.projectOnlyCount }}
+            </span>
+          </div>
+
           <div v-if="pp.originalTotal > 0" class="mt-2">
             <div class="h-1.5 bg-muted rounded-full overflow-hidden">
               <div

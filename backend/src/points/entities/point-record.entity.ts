@@ -11,6 +11,12 @@ export enum PointSource {
   ADJUSTMENT = 'adjustment',           // 管理员手动调整
 }
 
+export enum PoolStatus {
+  PROJECT_ONLY = 'project_only',       // 仅计入项目工分，不进入公共奖池
+  PENDING_APPROVAL = 'pending_approval', // 待审批进入奖池
+  APPROVED = 'approved',               // 已审批，计入奖池
+}
+
 @Entity('point_records')
 @Index(['tenantId', 'userId', 'projectId'])
 export class PointRecord {
@@ -43,6 +49,13 @@ export class PointRecord {
 
   @Column('uuid', { nullable: true })
   voteSessionId!: string | null; // 关联的投票会话
+
+  @Column({
+    type: 'enum',
+    enum: PoolStatus,
+    default: PoolStatus.APPROVED,
+  })
+  poolStatus!: PoolStatus; // 奖池状态，默认 approved 确保现有数据向后兼容
 
   @CreateDateColumn()
   createdAt!: Date;

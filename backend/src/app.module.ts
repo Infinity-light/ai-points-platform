@@ -20,6 +20,8 @@ import { BrainModule } from './brain/brain.module';
 import { AdminModule } from './admin/admin.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { NotificationModule } from './notification/notification.module';
+import { DividendModule } from './dividend/dividend.module';
+import { SkillModule } from './skill/skill.module';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import authConfig from './config/auth.config';
@@ -51,6 +53,8 @@ import aiConfig from './config/ai.config';
     AdminModule,
     SuperAdminModule,
     NotificationModule,
+    DividendModule,
+    SkillModule,
   ],
   controllers: [AppController],
 })

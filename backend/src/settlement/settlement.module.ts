@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SettlementService } from './settlement.service';
 import { SettlementController } from './settlement.controller';
@@ -8,15 +8,18 @@ import { TaskModule } from '../task/task.module';
 import { PointsModule } from '../points/points.module';
 import { ProjectModule } from '../project/project.module';
 import { UserModule } from '../user/user.module';
+import { User } from '../user/entities/user.entity';
+import { DividendModule } from '../dividend/dividend.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Settlement]),
+    TypeOrmModule.forFeature([Settlement, User]),
     VoteModule,
     TaskModule,
     PointsModule,
     ProjectModule,
     UserModule,
+    forwardRef(() => DividendModule),
   ],
   controllers: [SettlementController],
   providers: [SettlementService],

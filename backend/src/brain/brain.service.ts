@@ -6,6 +6,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { BrainConversation, ChatMessage } from './entities/brain-conversation.entity';
 import { TaskService } from '../task/task.service';
 import { ProjectService } from '../project/project.service';
+import { PointsService } from '../points/points.service';
+import { SkillService } from '../skill/skill.service';
+import { Submission, SubmissionType } from '../submission/entities/submission.entity';
 import { Response } from 'express';
 
 @Injectable()
@@ -17,8 +20,12 @@ export class BrainService {
   constructor(
     @InjectRepository(BrainConversation)
     private readonly conversationRepository: Repository<BrainConversation>,
+    @InjectRepository(Submission)
+    private readonly submissionRepository: Repository<Submission>,
     private readonly taskService: TaskService,
     private readonly projectService: ProjectService,
+    private readonly pointsService: PointsService,
+    private readonly skillService: SkillService,
     private readonly configService: ConfigService,
   ) {
     this.client = new Anthropic({
@@ -61,7 +68,7 @@ export class BrainService {
   }
 
   /**
-   * Build system prompt with project context
+   * Build system prompt with project context, points, submissions, and skills
    */
   private async buildSystemPrompt(projectId: string, tenantId: string): Promise<string> {
     const project = await this.projectService.findOne(projectId, tenantId);
@@ -71,10 +78,58 @@ export class BrainService {
       `- [${t.status}] ${t.title}${t.assigneeId ? ' (已认领)' : ' (待认领)'}${t.estimatedPoints ? ` ~${t.estimatedPoints}分` : ''}`
     ).join('\n');
 
+    // Fetch points distribution
+    let pointsSummary = '（暂无工分数据）';
+    try {
+      const pointsTable = await this.pointsService.getProjectPointsTable(tenantId, projectId);
+      if (pointsTable.rows.length > 0) {
+        pointsSummary = pointsTable.rows.slice(0, 20).map((m) =>
+          `- ${m.userName}: 活跃工分 ${m.activeTotal}（历史 ${m.originalTotal}，占比 ${(m.ratio * 100).toFixed(1)}%）`
+        ).join('\n');
+      }
+    } catch {
+      pointsSummary = '（获取工分数据失败）';
+    }
+
+    // Fetch recent submissions
+    let submissionSummary = '（暂无提交记录）';
+    try {
+      const recentSubmissions = await this.submissionRepository.find({
+        where: { tenantId },
+        order: { createdAt: 'DESC' },
+        take: 10,
+      });
+      if (recentSubmissions.length > 0) {
+        const typeLabels: Record<string, string> = {
+          [SubmissionType.EXPLORE]: 'Skill/文档',
+          [SubmissionType.AI_EXEC]: 'AI执行',
+          [SubmissionType.MANUAL]: '人工',
+        };
+        submissionSummary = recentSubmissions.map((s) =>
+          `- [${typeLabels[s.type] ?? s.type}] ${s.content.slice(0, 80)}${s.content.length > 80 ? '...' : ''} (AI评审: ${s.aiReviewStatus})`
+        ).join('\n');
+      }
+    } catch {
+      submissionSummary = '（获取提交记录失败）';
+    }
+
+    // Fetch skill catalog
+    let skillSummary = '（暂无 Skill）';
+    try {
+      const skills = await this.skillService.findForProject(tenantId, projectId);
+      if (skills.length > 0) {
+        skillSummary = skills.slice(0, 20).map((s) =>
+          `- ${s.name} (v${s.version}): ${s.description.slice(0, 60)}${s.description.length > 60 ? '...' : ''}`
+        ).join('\n');
+      }
+    } catch {
+      skillSummary = '（获取 Skill 数据失败）';
+    }
+
     return `你是「${project.name}」项目的 AI 智脑助手。你的职责是帮助项目团队：
-1. 分析项目现状，提出任务建议
-2. 回答项目相关问题
-3. 协助团队规划工作
+1. 分析项目现状和工分分布，提出任务建议
+2. 回答项目相关问题（任务、工分、Skill、贡献分析）
+3. 协助团队规划工作和任务分派
 
 项目信息：
 - 名称：${project.name}
@@ -85,9 +140,21 @@ export class BrainService {
 当前任务表（最多50条）：
 ${taskSummary || '（暂无任务）'}
 
+团队工分分布（活跃工分排行）：
+${pointsSummary}
+
+近期提交记录（最近10条）：
+${submissionSummary}
+
+项目 Skill 库：
+${skillSummary}
+
 你可以：
+- 分析团队工分分布，识别贡献不均衡问题
 - 建议新任务（说明：推荐创建任务「xxx」，预估工分：N）
-- 分析任务完成情况
+- 分析任务完成情况和提交质量趋势
+- 推荐合适的 Skill 给团队成员
+- 识别需要关注的成员（工分下滑、长期未提交等）
 - 提出优化建议
 
 保持专业、简洁、建设性。用中文回复。`;
