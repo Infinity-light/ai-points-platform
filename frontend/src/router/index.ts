@@ -87,13 +87,21 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const token = localStorage.getItem('access_token');
   if (to.meta.requiresAuth && !token) {
     next({ name: 'Login' });
   } else if (to.meta.guestOnly && token) {
     next({ name: 'Dashboard' });
   } else {
+    // Ensure user data is loaded when authenticated
+    if (token) {
+      const { useAuthStore } = await import('@/stores/auth');
+      const authStore = useAuthStore();
+      if (!authStore.userLoaded) {
+        await authStore.fetchUser();
+      }
+    }
     next();
   }
 });
