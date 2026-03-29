@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PointsService } from './points.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PointRecord, PointSource } from './entities/point-record.entity';
+import { PointApprovalBatch } from './entities/point-approval-batch.entity';
 import { Project } from '../project/entities/project.entity';
+import { User } from '../user/entities/user.entity';
+import { ProjectService } from '../project/project.service';
 
 const makeProject = (id: string, settlementRound: number, cyclesPerStep = 3, maxSteps = 4) => ({
   id,
@@ -13,7 +16,7 @@ const makeProject = (id: string, settlementRound: number, cyclesPerStep = 3, max
 
 describe('PointsService', () => {
   let service: PointsService;
-  let pointRepo: { create: jest.Mock; save: jest.Mock; find: jest.Mock };
+  let pointRepo: { create: jest.Mock; save: jest.Mock; find: jest.Mock; createQueryBuilder: jest.Mock };
   let projectRepo: { find: jest.Mock };
 
   beforeEach(async () => {
@@ -21,16 +24,36 @@ describe('PointsService', () => {
       create: jest.fn().mockImplementation((d) => d),
       save: jest.fn().mockImplementation((r) => Promise.resolve({ id: 'record-uuid', ...r })),
       find: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
     projectRepo = {
       find: jest.fn().mockResolvedValue([]),
+    };
+
+    const mockBatchRepo = {
+      create: jest.fn(),
+      save: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn(),
+    };
+
+    const mockUserRepo = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+
+    const mockProjectService = {
+      findOne: jest.fn(),
+      getMembers: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PointsService,
         { provide: getRepositoryToken(PointRecord), useValue: pointRepo },
+        { provide: getRepositoryToken(PointApprovalBatch), useValue: mockBatchRepo },
         { provide: getRepositoryToken(Project), useValue: projectRepo },
+        { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        { provide: ProjectService, useValue: mockProjectService },
       ],
     }).compile();
 

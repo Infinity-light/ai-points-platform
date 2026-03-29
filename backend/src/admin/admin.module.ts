@@ -6,11 +6,13 @@ import { User } from '../user/entities/user.entity';
 import { PointRecord } from '../points/entities/point-record.entity';
 import { Invite } from '../invite/entities/invite.entity';
 import { UserModule } from '../user/user.module';
+import { PointsModule } from '../points/points.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, PointRecord, Invite]),
     UserModule,
+    PointsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

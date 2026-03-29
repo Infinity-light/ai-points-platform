@@ -1,25 +1,40 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { adminApi, type AdminUser, type InviteCode, type TenantStats } from '@/services/admin';
+import { approvalApi, type ApprovalBatch, type ApprovalBatchDetail } from '@/services/points';
+import BaseButton from '@/components/ui/BaseButton.vue';
 
-const activeTab = ref<'users' | 'invites' | 'stats'>('users');
+type AdminTab = 'users' | 'invites' | 'stats' | 'approvals';
 
-// Users tab
+const activeTab = ref<AdminTab>('users');
+
+// ─── Users tab ───────────────────────────────────────────────────────────────
 const users = ref<AdminUser[]>([]);
 const usersLoading = ref(false);
 const usersError = ref('');
 const roleUpdateLoading = ref<Record<string, boolean>>({});
 
-// Invites tab
+// ─── Invites tab ─────────────────────────────────────────────────────────────
 const invites = ref<InviteCode[]>([]);
 const invitesLoading = ref(false);
 const invitesError = ref('');
 const toggleLoading = ref<Record<string, boolean>>({});
 
-// Stats tab
+// ─── Stats tab ───────────────────────────────────────────────────────────────
 const stats = ref<TenantStats | null>(null);
 const statsLoading = ref(false);
 const statsError = ref('');
+
+// ─── Approvals tab ───────────────────────────────────────────────────────────
+const approvalBatches = ref<ApprovalBatch[]>([]);
+const approvalsLoading = ref(false);
+const approvalsError = ref('');
+const expandedBatchId = ref<string | null>(null);
+const batchDetail = ref<ApprovalBatchDetail | null>(null);
+const batchDetailLoading = ref(false);
+const rejectNoteTarget = ref<string | null>(null);
+const rejectNoteValue = ref('');
+const actionLoading = ref<Record<string, boolean>>({});
 
 const availableRoles = [
   { value: 'employee', label: '普通员工' },
@@ -27,6 +42,7 @@ const availableRoles = [
   { value: 'hr_admin', label: 'HR管理员' },
 ];
 
+// ─── Users ───────────────────────────────────────────────────────────────────
 async function loadUsers() {
   usersLoading.value = true;
   usersError.value = '';
@@ -54,6 +70,7 @@ async function updateRole(userId: string, role: string) {
   }
 }
 
+// ─── Invites ─────────────────────────────────────────────────────────────────
 async function loadInvites() {
   invitesLoading.value = true;
   invitesError.value = '';
@@ -81,6 +98,7 @@ async function toggleInvite(id: string, isActive: boolean) {
   }
 }
 
+// ─── Stats ───────────────────────────────────────────────────────────────────
 async function loadStats() {
   statsLoading.value = true;
   statsError.value = '';
@@ -93,21 +111,118 @@ async function loadStats() {
   }
 }
 
-function switchTab(tab: 'users' | 'invites' | 'stats') {
+// ─── Approvals ───────────────────────────────────────────────────────────────
+async function loadApprovals() {
+  approvalsLoading.value = true;
+  approvalsError.value = '';
+  try {
+    const res = await approvalApi.list();
+    approvalBatches.value = res.data;
+  } catch {
+    approvalsError.value = '加载审批队列失败，请刷新重试';
+  } finally {
+    approvalsLoading.value = false;
+  }
+}
+
+async function toggleBatchDetail(batch: ApprovalBatch) {
+  if (expandedBatchId.value === batch.id) {
+    expandedBatchId.value = null;
+    batchDetail.value = null;
+    return;
+  }
+  expandedBatchId.value = batch.id;
+  batchDetailLoading.value = true;
+  try {
+    const res = await approvalApi.get(batch.id);
+    batchDetail.value = res.data;
+  } catch {
+    batchDetail.value = null;
+  } finally {
+    batchDetailLoading.value = false;
+  }
+}
+
+async function approveBatch(batchId: string) {
+  actionLoading.value[batchId] = true;
+  approvalsError.value = '';
+  try {
+    const res = await approvalApi.approve(batchId);
+    const idx = approvalBatches.value.findIndex((b) => b.id === batchId);
+    if (idx !== -1) approvalBatches.value[idx] = res.data;
+  } catch {
+    approvalsError.value = '审批操作失败，请重试';
+  } finally {
+    actionLoading.value[batchId] = false;
+  }
+}
+
+function openRejectNote(batchId: string) {
+  rejectNoteTarget.value = batchId;
+  rejectNoteValue.value = '';
+}
+
+async function submitReject() {
+  if (!rejectNoteTarget.value) return;
+  const batchId = rejectNoteTarget.value;
+  actionLoading.value[batchId] = true;
+  approvalsError.value = '';
+  try {
+    const res = await approvalApi.reject({
+      id: batchId,
+      reviewNote: rejectNoteValue.value || undefined,
+    });
+    const idx = approvalBatches.value.findIndex((b) => b.id === batchId);
+    if (idx !== -1) approvalBatches.value[idx] = res.data;
+    rejectNoteTarget.value = null;
+  } catch {
+    approvalsError.value = '驳回操作失败，请重试';
+  } finally {
+    actionLoading.value[batchId] = false;
+  }
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tab: AdminTab) {
   activeTab.value = tab;
   if (tab === 'users' && users.value.length === 0) loadUsers();
   if (tab === 'invites' && invites.value.length === 0) loadInvites();
   if (tab === 'stats' && !stats.value) loadStats();
+  if (tab === 'approvals' && approvalBatches.value.length === 0) loadApprovals();
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDate(iso: string | null) {
   if (!iso) return '永不过期';
-  return new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function roleLabel(role: string) {
   return availableRoles.find((r) => r.value === role)?.label ?? role;
 }
+
+const approvalStatusConfig: Record<
+  ApprovalBatch['status'],
+  { label: string; class: string }
+> = {
+  pending: { label: '待审批', class: 'bg-amber-100 text-amber-700' },
+  approved: { label: '已批准', class: 'bg-green-100 text-green-700' },
+  rejected: { label: '已驳回', class: 'bg-red-100 text-red-600' },
+};
 
 onMounted(() => {
   loadUsers();
@@ -130,6 +245,7 @@ onMounted(() => {
             { key: 'users', label: '用户管理' },
             { key: 'invites', label: '邀请码管理' },
             { key: 'stats', label: '统计概览' },
+            { key: 'approvals', label: '工分审批' },
           ]"
           :key="tab.key"
           class="pb-3 text-sm font-medium transition-colors border-b-2 -mb-px"
@@ -138,7 +254,7 @@ onMounted(() => {
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           "
-          @click="switchTab(tab.key as 'users' | 'invites' | 'stats')"
+          @click="switchTab(tab.key as AdminTab)"
         >
           {{ tab.label }}
         </button>
@@ -171,7 +287,11 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
-            <tr v-for="user in users" :key="user.id" class="hover:bg-accent/30 transition-colors">
+            <tr
+              v-for="user in users"
+              :key="user.id"
+              class="hover:bg-accent/30 transition-colors"
+            >
               <td class="py-3 pr-4 font-medium text-foreground">{{ user.name }}</td>
               <td class="py-3 pr-4 text-muted-foreground">{{ user.email }}</td>
               <td class="py-3 pr-4">
@@ -216,7 +336,10 @@ onMounted(() => {
       >
         {{ invitesError }}
       </div>
-      <div v-else-if="invites.length === 0" class="text-center py-12 text-muted-foreground text-sm">
+      <div
+        v-else-if="invites.length === 0"
+        class="text-center py-12 text-muted-foreground text-sm"
+      >
         暂无邀请码
       </div>
       <div v-else class="overflow-x-auto">
@@ -232,7 +355,11 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
-            <tr v-for="invite in invites" :key="invite.id" class="hover:bg-accent/30 transition-colors">
+            <tr
+              v-for="invite in invites"
+              :key="invite.id"
+              class="hover:bg-accent/30 transition-colors"
+            >
               <td class="py-3 pr-4 font-mono font-medium text-foreground">{{ invite.code }}</td>
               <td class="py-3 pr-4 text-muted-foreground">{{ invite.note ?? '—' }}</td>
               <td class="py-3 pr-4 text-muted-foreground">
@@ -279,24 +406,19 @@ onMounted(() => {
       </div>
       <div v-else-if="stats">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <!-- Total users card -->
           <div class="bg-card border border-border rounded-lg p-5">
             <p class="text-sm text-muted-foreground">总用户数</p>
             <p class="text-3xl font-bold text-foreground mt-1">{{ stats.totalUsers }}</p>
           </div>
-          <!-- Total points card -->
           <div class="bg-card border border-border rounded-lg p-5">
             <p class="text-sm text-muted-foreground">累计发放工分</p>
             <p class="text-3xl font-bold text-foreground mt-1">{{ stats.totalPointsAwarded }}</p>
           </div>
-          <!-- Active invite codes card -->
           <div class="bg-card border border-border rounded-lg p-5">
             <p class="text-sm text-muted-foreground">有效邀请码</p>
             <p class="text-3xl font-bold text-foreground mt-1">{{ stats.activeInviteCodes }}</p>
           </div>
         </div>
-
-        <!-- Role breakdown -->
         <div class="bg-card border border-border rounded-lg p-5">
           <h3 class="text-sm font-semibold text-foreground mb-4">角色分布</h3>
           <div class="space-y-3">
@@ -320,6 +442,174 @@ onMounted(() => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Approvals Tab -->
+    <div v-else-if="activeTab === 'approvals'">
+      <div v-if="approvalsLoading" class="space-y-2">
+        <div v-for="i in 4" :key="i" class="h-16 bg-muted rounded animate-pulse" />
+      </div>
+      <div
+        v-else-if="approvalsError"
+        class="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg mb-4"
+      >
+        {{ approvalsError }}
+      </div>
+      <div
+        v-if="!approvalsLoading && approvalBatches.length === 0"
+        class="text-center py-12 text-muted-foreground text-sm"
+      >
+        暂无待审批工分批次
+      </div>
+      <div v-else-if="!approvalsLoading" class="space-y-2">
+        <div
+          v-for="batch in approvalBatches"
+          :key="batch.id"
+          class="bg-card border border-border rounded-lg overflow-hidden"
+        >
+          <!-- Batch row -->
+          <div
+            class="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+            @click="toggleBatchDetail(batch)"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-sm font-medium text-foreground truncate">
+                  {{ batch.projectName ?? '未知项目' }}
+                </span>
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  :class="approvalStatusConfig[batch.status].class"
+                >
+                  {{ approvalStatusConfig[batch.status].label }}
+                </span>
+              </div>
+              <p class="text-xs text-muted-foreground">
+                提交人：{{ batch.submitterName ?? batch.submittedBy }} ·
+                {{ formatDateTime(batch.createdAt) }}
+              </p>
+            </div>
+
+            <div class="text-right shrink-0">
+              <p class="text-sm font-medium text-foreground">{{ batch.totalPoints }} 分</p>
+              <p class="text-xs text-muted-foreground">{{ batch.pointRecordIds.length }} 条记录</p>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-2 shrink-0" @click.stop>
+              <BaseButton
+                v-if="batch.status === 'pending'"
+                size="sm"
+                :loading="actionLoading[batch.id]"
+                @click="approveBatch(batch.id)"
+              >
+                批准
+              </BaseButton>
+              <BaseButton
+                v-if="batch.status === 'pending'"
+                size="sm"
+                variant="outline"
+                :loading="actionLoading[batch.id]"
+                @click="openRejectNote(batch.id)"
+              >
+                驳回
+              </BaseButton>
+            </div>
+
+            <!-- Expand arrow -->
+            <svg
+              class="w-4 h-4 text-muted-foreground transition-transform shrink-0"
+              :class="expandedBatchId === batch.id ? 'rotate-180' : ''"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
+
+          <!-- Expanded detail -->
+          <div
+            v-if="expandedBatchId === batch.id"
+            class="border-t border-border px-4 py-3"
+          >
+            <div v-if="batchDetailLoading" class="space-y-2">
+              <div v-for="i in 3" :key="i" class="h-8 bg-muted rounded animate-pulse" />
+            </div>
+            <div v-else-if="batchDetail">
+              <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                工分明细
+              </p>
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-muted-foreground border-b border-border">
+                    <th class="pb-2 font-medium">任务名</th>
+                    <th class="pb-2 font-medium text-right">工分</th>
+                    <th class="pb-2 font-medium text-right">获得时间</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr
+                    v-for="record in batchDetail.pointRecords"
+                    :key="record.id"
+                    class="hover:bg-muted/20"
+                  >
+                    <td class="py-2 text-foreground">{{ record.taskTitle }}</td>
+                    <td class="py-2 text-right font-medium text-primary">{{ record.points }}</td>
+                    <td class="py-2 text-right text-muted-foreground">
+                      {{ formatDateTime(record.acquiredAt) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-if="batch.reviewNote" class="mt-3 text-xs text-muted-foreground">
+                审批备注：{{ batch.reviewNote }}
+              </div>
+            </div>
+            <div v-else class="text-xs text-muted-foreground py-2">加载明细失败</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject Note Modal -->
+  <div
+    v-if="rejectNoteTarget"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    @click.self="rejectNoteTarget = null"
+  >
+    <div class="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
+      <h3 class="font-semibold text-foreground mb-4">驳回工分批次</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm text-muted-foreground mb-1">驳回备注（可选）</label>
+          <textarea
+            v-model="rejectNoteValue"
+            rows="3"
+            placeholder="填写驳回原因..."
+            class="w-full px-3 py-2 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+        </div>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <BaseButton
+          class="flex-1"
+          variant="outline"
+          :loading="rejectNoteTarget ? actionLoading[rejectNoteTarget] : false"
+          @click="submitReject"
+        >
+          确认驳回
+        </BaseButton>
+        <BaseButton variant="ghost" class="flex-1" @click="rejectNoteTarget = null">
+          取消
+        </BaseButton>
       </div>
     </div>
   </div>

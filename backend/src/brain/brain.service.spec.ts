@@ -2,8 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BrainService } from './brain.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BrainConversation } from './entities/brain-conversation.entity';
+import { Submission } from '../submission/entities/submission.entity';
 import { TaskService } from '../task/task.service';
 import { ProjectService } from '../project/project.service';
+import { PointsService } from '../points/points.service';
+import { SkillService } from '../skill/skill.service';
 import { ConfigService } from '@nestjs/config';
 
 const mockCreate = jest.fn().mockResolvedValue({
@@ -69,8 +72,11 @@ describe('BrainService', () => {
       providers: [
         BrainService,
         { provide: getRepositoryToken(BrainConversation), useValue: convRepo },
+        { provide: getRepositoryToken(Submission), useValue: { find: jest.fn().mockResolvedValue([]) } },
         { provide: TaskService, useValue: taskService },
         { provide: ProjectService, useValue: projectService },
+        { provide: PointsService, useValue: { getProjectPointsTable: jest.fn().mockResolvedValue({ members: [] }) } },
+        { provide: SkillService, useValue: { findForProject: jest.fn().mockResolvedValue([]) } },
         {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('test-value') },

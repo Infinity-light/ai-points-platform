@@ -7,6 +7,7 @@ import { getQueueToken } from '@nestjs/bull';
 import { QUEUE_NAMES } from '../queue/queue.constants';
 import { BadRequestException } from '@nestjs/common';
 import { TaskStatus } from '../task/enums/task-status.enum';
+import { SkillService } from '../skill/skill.service';
 
 const mockTask = {
   id: 'task-uuid',
@@ -47,6 +48,7 @@ describe('SubmissionService', () => {
   };
   let taskService: jest.Mocked<Partial<TaskService>>;
   let aiReviewQueue: { add: jest.Mock };
+  let skillService: jest.Mocked<Partial<SkillService>>;
 
   beforeEach(async () => {
     submissionRepo = {
@@ -68,12 +70,19 @@ describe('SubmissionService', () => {
       add: jest.fn().mockResolvedValue({ id: 'job-uuid' }),
     };
 
+    skillService = {
+      validateSkillMetadata: jest.fn(),
+      registerOrUpdateSkill: jest.fn().mockResolvedValue({ skill: { id: 'skill-uuid' }, version: 1 }),
+      findOne: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubmissionService,
         { provide: getRepositoryToken(Submission), useValue: submissionRepo },
         { provide: TaskService, useValue: taskService },
         { provide: getQueueToken(QUEUE_NAMES.AI_REVIEW), useValue: aiReviewQueue },
+        { provide: SkillService, useValue: skillService },
       ],
     }).compile();
 

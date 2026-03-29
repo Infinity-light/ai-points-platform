@@ -6,8 +6,8 @@
     "startCmd": "docker compose -f docker-compose.prod.yml up -d"
   },
   "server": {
-    "host": "47.98.171.82",
-    "user": "root",
+    "host": "101.43.67.179",
+    "user": "ubuntu",
     "sshKeyPath": "~/.ssh/id_rsa",
     "deployDir": "/opt/apps"
   },
