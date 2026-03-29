@@ -46,7 +46,7 @@ export class Skill {
   @Column('text')
   content!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   repoUrl!: string | null;
 
   @Column('uuid', { nullable: true })

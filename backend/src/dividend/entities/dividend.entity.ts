@@ -45,7 +45,7 @@ export class Dividend {
   @Column()
   roundNumber!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   totalAmount!: number | null;
 
   @Column()
