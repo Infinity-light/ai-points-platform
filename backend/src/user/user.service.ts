@@ -33,13 +33,22 @@ export class UserService {
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // 该租户的第一个注册用户自动成为超级管理员
+    let assignedRole = rest.role ?? Role.EMPLOYEE;
+    if (!rest.role) {
+      const tenantUserCount = await this.userRepository.count({ where: { tenantId } });
+      if (tenantUserCount === 0) {
+        assignedRole = Role.SUPER_ADMIN;
+      }
+    }
+
     const user = this.userRepository.create({
       tenantId,
       email,
       passwordHash,
       name: rest.name,
       phone: rest.phone ?? null,
-      role: rest.role ?? Role.EMPLOYEE,
+      role: assignedRole,
       inviteCodeUsed: rest.inviteCode ?? null,
       isEmailVerified: false,
     });
