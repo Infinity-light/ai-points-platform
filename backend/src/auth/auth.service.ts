@@ -12,6 +12,7 @@ import { UserService } from '../user/user.service';
 import { TenantService } from '../tenant/tenant.service';
 import { EmailService } from './email.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterOrgDto } from './dto/register-org.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { User } from '../user/entities/user.entity';
@@ -81,6 +82,49 @@ export class AuthService {
     await this.emailService.sendVerificationCode(user.email, code, user.name);
 
     return { userId: user.id, message: '注册成功，请检查邮箱并输入验证码' };
+  }
+
+  async registerWithOrg(dto: RegisterOrgDto): Promise<{ userId: string; message: string }> {
+    // 1. 创建租户
+    let tenant;
+    try {
+      tenant = await this.tenantService.create({
+        name: dto.orgName,
+        slug: dto.orgSlug,
+      });
+    } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        throw new ConflictException('该组织标识已被占用');
+      }
+      throw err;
+    }
+
+    // 2. 创建用户（第一个用户，自动成为 super_admin）
+    let user: User;
+    try {
+      user = await this.userService.create({
+        tenantId: tenant.id,
+        email: dto.email,
+        password: dto.password,
+        name: dto.name,
+        phone: dto.phone,
+      });
+    } catch (err) {
+      // 用户创建失败时清理租户
+      try { await this.tenantService.remove(tenant.id); } catch { /* ignore cleanup error */ }
+      if ((err as { status?: number })?.status === 409) {
+        throw new ConflictException('该邮箱已被注册');
+      }
+      throw err;
+    }
+
+    // 3. 发送验证码
+    const code = generateCode(6);
+    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+    await this.userService.updateEmailVerification(user.id, code, expiry);
+    await this.emailService.sendVerificationCode(user.email, code, user.name);
+
+    return { userId: user.id, message: '组织创建成功，请检查邮箱并输入验证码' };
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<AuthResponse> {

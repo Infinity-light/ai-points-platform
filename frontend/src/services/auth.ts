@@ -9,6 +9,15 @@ export interface RegisterPayload {
   tenantSlug: string;
 }
 
+export interface RegisterOrgPayload {
+  orgName: string;
+  orgSlug: string;
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -33,6 +42,9 @@ export interface AuthResponse {
 export const authApi = {
   register(payload: RegisterPayload) {
     return api.post<{ userId: string; message: string }>('/auth/register', payload);
+  },
+  registerOrg(payload: RegisterOrgPayload) {
+    return api.post<{ userId: string; message: string }>('/auth/register-org', payload);
   },
   verifyEmail(userId: string, code: string) {
     return api.post<AuthResponse>('/auth/verify-email', { userId, code });

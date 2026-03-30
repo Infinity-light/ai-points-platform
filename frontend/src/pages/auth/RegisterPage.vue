@@ -10,22 +10,32 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 const router = useRouter();
 const authStore = useAuthStore();
 
-// Step 1: registration info
+// Mode: 'join' = join existing org, 'create' = create new org
+const mode = ref<'join' | 'create'>('create');
+
+// Step 1: registration info, Step 2: email verification
 const step = ref<1 | 2>(1);
 const pendingUserId = ref('');
 const pendingEmail = ref('');
 
 const form = reactive({
+  // Join mode
   tenantSlug: '',
+  inviteCode: '',
+  // Create mode
+  orgName: '',
+  orgSlug: '',
+  // Common
   name: '',
   email: '',
   password: '',
   phone: '',
-  inviteCode: '',
 });
 
 const errors = reactive({
   tenantSlug: '',
+  orgName: '',
+  orgSlug: '',
   name: '',
   email: '',
   password: '',
@@ -41,29 +51,86 @@ const resendCooldown = ref(0);
 const loading = ref(false);
 const showPassword = ref(false);
 
+function clearErrors() {
+  errors.tenantSlug = '';
+  errors.orgName = '';
+  errors.orgSlug = '';
+  errors.name = '';
+  errors.email = '';
+  errors.password = '';
+  errors.phone = '';
+  errors.global = '';
+}
+
 function validateStep1(): boolean {
-  errors.tenantSlug = form.tenantSlug.trim() ? '' : '请输入组织标识';
+  clearErrors();
+
+  if (mode.value === 'join') {
+    errors.tenantSlug = form.tenantSlug.trim() ? '' : '请输入组织标识';
+  } else {
+    errors.orgName = form.orgName.trim() ? '' : '请输入组织名称';
+    errors.orgSlug = form.orgSlug.trim()
+      ? /^[a-z0-9-]+$/.test(form.orgSlug.trim())
+        ? ''
+        : '只能包含小写字母、数字和连字符'
+      : '请输入组织标识';
+  }
+
   errors.name = form.name.trim() ? '' : '请输入您的姓名';
   errors.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? '' : '请输入有效的邮箱地址';
   errors.password = form.password.length >= 8 ? '' : '密码至少8位';
   errors.phone = !form.phone || /^1[3-9]\d{9}$/.test(form.phone) ? '' : '手机号格式不正确';
-  errors.global = '';
-  return !errors.tenantSlug && !errors.name && !errors.email && !errors.password && !errors.phone;
+
+  const hasErrors = mode.value === 'join'
+    ? !!(errors.tenantSlug || errors.name || errors.email || errors.password || errors.phone)
+    : !!(errors.orgName || errors.orgSlug || errors.name || errors.email || errors.password || errors.phone);
+
+  return !hasErrors;
+}
+
+// Auto-generate slug from org name
+function onOrgNameInput(val: string) {
+  form.orgName = val;
+  errors.orgName = '';
+  // Only auto-fill slug if user hasn't manually edited it
+  if (!form.orgSlug || form.orgSlug === slugify(form.orgName.slice(0, -1))) {
+    form.orgSlug = slugify(val);
+  }
+}
+
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
+    .replace(/[\u4e00-\u9fff]+/g, '')  // remove Chinese chars from slug
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
 }
 
 async function handleRegister() {
   if (!validateStep1() || loading.value) return;
   loading.value = true;
   try {
-    const payload = {
-      tenantSlug: form.tenantSlug.trim(),
-      email: form.email.trim(),
-      password: form.password,
-      name: form.name.trim(),
-      ...(form.phone && { phone: form.phone }),
-      ...(form.inviteCode && { inviteCode: form.inviteCode.trim() }),
-    };
-    const res = await authApi.register(payload);
+    let res;
+    if (mode.value === 'create') {
+      res = await authApi.registerOrg({
+        orgName: form.orgName.trim(),
+        orgSlug: form.orgSlug.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        name: form.name.trim(),
+        ...(form.phone && { phone: form.phone }),
+      });
+    } else {
+      res = await authApi.register({
+        tenantSlug: form.tenantSlug.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        name: form.name.trim(),
+        ...(form.phone && { phone: form.phone }),
+        ...(form.inviteCode && { inviteCode: form.inviteCode.trim() }),
+      });
+    }
     pendingUserId.value = res.data.userId;
     pendingEmail.value = form.email;
     step.value = 2;
@@ -121,10 +188,14 @@ function startResendCooldown() {
   }, 1000);
 }
 
-// Handle code input — auto-submit when 6 digits entered
 function onCodeInput(val: string) {
   verificationCode.value = val.replace(/\D/g, '').slice(0, 6);
   if (verificationCode.value.length === 6) handleVerify();
+}
+
+function switchMode(newMode: 'join' | 'create') {
+  mode.value = newMode;
+  clearErrors();
 }
 </script>
 
@@ -163,16 +234,66 @@ function onCodeInput(val: string) {
             {{ errors.global }}
           </div>
 
-          <FormField label="组织标识" :error="errors.tenantSlug" required hint="您的团队 slug，由管理员提供">
-            <BaseInput
-              v-model="form.tenantSlug"
-              placeholder="例如：shenbi-team"
-              :error="!!errors.tenantSlug"
-              autocomplete="organization"
-              @input="errors.tenantSlug = ''"
-            />
-          </FormField>
+          <!-- Mode toggle -->
+          <div class="flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              class="flex-1 py-2.5 text-sm font-medium transition-colors"
+              :class="mode === 'create'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-muted-foreground hover:text-foreground'"
+              @click="switchMode('create')"
+            >
+              创建新组织
+            </button>
+            <button
+              type="button"
+              class="flex-1 py-2.5 text-sm font-medium transition-colors border-l border-border"
+              :class="mode === 'join'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-muted-foreground hover:text-foreground'"
+              @click="switchMode('join')"
+            >
+              加入现有组织
+            </button>
+          </div>
 
+          <!-- Create org fields -->
+          <template v-if="mode === 'create'">
+            <FormField label="组织名称" :error="errors.orgName" required hint="您的团队或公司名称">
+              <BaseInput
+                :model-value="form.orgName"
+                placeholder="例如：神笔科技"
+                :error="!!errors.orgName"
+                autocomplete="organization"
+                @update:model-value="onOrgNameInput"
+              />
+            </FormField>
+
+            <FormField label="组织标识" :error="errors.orgSlug" required hint="用于登录的唯一标识，只能包含小写字母、数字和连字符">
+              <BaseInput
+                v-model="form.orgSlug"
+                placeholder="例如：shenbi-tech"
+                :error="!!errors.orgSlug"
+                @input="errors.orgSlug = ''"
+              />
+            </FormField>
+          </template>
+
+          <!-- Join org fields -->
+          <template v-else>
+            <FormField label="组织标识" :error="errors.tenantSlug" required hint="由管理员提供的团队标识">
+              <BaseInput
+                v-model="form.tenantSlug"
+                placeholder="例如：shenbi-team"
+                :error="!!errors.tenantSlug"
+                autocomplete="organization"
+                @input="errors.tenantSlug = ''"
+              />
+            </FormField>
+          </template>
+
+          <!-- Common fields -->
           <FormField label="姓名" :error="errors.name" required>
             <BaseInput
               v-model="form.name"
@@ -234,7 +355,7 @@ function onCodeInput(val: string) {
             />
           </FormField>
 
-          <FormField label="邀请码" hint="选填，由管理员提供">
+          <FormField v-if="mode === 'join'" label="邀请码" hint="选填，由管理员提供">
             <BaseInput
               v-model="form.inviteCode"
               placeholder="8位邀请码"
@@ -243,8 +364,12 @@ function onCodeInput(val: string) {
           </FormField>
 
           <BaseButton type="submit" class="w-full" size="lg" :loading="loading">
-            注册
+            {{ mode === 'create' ? '创建组织并注册' : '注册' }}
           </BaseButton>
+
+          <p v-if="mode === 'create'" class="text-xs text-muted-foreground text-center">
+            创建者将自动成为组织超级管理员
+          </p>
         </form>
 
         <!-- Step 2: Email Verification -->
@@ -268,7 +393,6 @@ function onCodeInput(val: string) {
               {{ verificationError }}
             </div>
 
-            <!-- Code input -->
             <input
               :value="verificationCode"
               type="text"
