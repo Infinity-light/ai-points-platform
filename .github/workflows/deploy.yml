@@ -96,6 +96,10 @@ jobs:
             JWT_REFRESH_EXPIRES_IN=7d
             LLM_MODEL=claude-sonnet-4-6
             LLM_TEMPERATURE=0.3
+            SMTP_HOST=smtp.resend.com
+            SMTP_PORT=465
+            SMTP_USER=resend
+            EMAIL_FROM=AI积分平台 <onboarding@resend.dev>
             UPLOAD_DIR=./uploads
             MAX_FILE_SIZE_MB=10
             ENVEOF
