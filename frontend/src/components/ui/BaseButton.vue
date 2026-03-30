@@ -12,15 +12,15 @@ const props = defineProps<{
 
 const cls = computed(() =>
   cn(
-    'inline-flex items-center justify-center font-medium rounded-md transition-colors',
+    'inline-flex items-center justify-center font-medium rounded-md transition-colors cursor-pointer',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     'disabled:pointer-events-none disabled:opacity-50',
     {
-      'bg-primary text-primary-foreground hover:bg-primary/90':
+      'bg-primary hover:bg-primary/90 text-primary-foreground':
         !props.variant || props.variant === 'primary',
-      'border border-border bg-transparent hover:bg-accent hover:text-accent-foreground':
+      'border border-border text-foreground hover:bg-white/5':
         props.variant === 'outline',
-      'hover:bg-accent hover:text-accent-foreground': props.variant === 'ghost',
+      'text-muted-foreground hover:text-foreground hover:bg-white/5': props.variant === 'ghost',
       'h-8 px-3 text-xs': props.size === 'sm',
       'h-10 px-4 text-sm': !props.size || props.size === 'md',
       'h-12 px-6 text-base': props.size === 'lg',

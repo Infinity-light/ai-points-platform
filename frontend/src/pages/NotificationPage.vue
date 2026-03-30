@@ -59,11 +59,11 @@ function formatDate(iso: string) {
   <div class="p-6 max-w-2xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-foreground">消息通知</h1>
+        <h1 class="text-2xl font-heading font-bold text-foreground">消息通知</h1>
         <p class="text-sm text-muted-foreground mt-0.5">查看系统消息与提醒</p>
       </div>
       <button
-        class="px-4 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        class="px-4 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors duration-200 cursor-pointer"
         @click="handleMarkAllRead"
       >
         全部已读
@@ -72,7 +72,7 @@ function formatDate(iso: string) {
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="space-y-3">
-      <div v-for="i in 4" :key="i" class="h-16 bg-muted rounded-lg animate-pulse" />
+      <div v-for="i in 4" :key="i" class="h-16 bg-secondary rounded-lg animate-pulse" />
     </div>
 
     <!-- Empty state -->
@@ -89,11 +89,11 @@ function formatDate(iso: string) {
       <div
         v-for="notif in notifications"
         :key="notif.id"
-        class="flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer"
+        class="flex items-start gap-3 p-4 rounded-lg border transition-colors duration-200 cursor-pointer hover:bg-white/5"
         :class="
           notif.isRead
-            ? 'bg-card border-border'
-            : 'bg-card border-primary/30 shadow-sm'
+            ? 'glass-card'
+            : 'bg-card/60 border-primary/30 shadow-sm'
         "
         @click="handleMarkRead(notif)"
       >
@@ -121,7 +121,7 @@ function formatDate(iso: string) {
         </div>
 
         <!-- Time -->
-        <span class="text-xs text-muted-foreground flex-shrink-0 mt-0.5">
+        <span class="text-xs font-mono text-muted-foreground flex-shrink-0 mt-0.5">
           {{ formatDate(notif.createdAt) }}
         </span>
       </div>

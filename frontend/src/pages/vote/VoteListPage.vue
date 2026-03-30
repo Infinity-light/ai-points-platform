@@ -32,10 +32,10 @@ async function loadSessions() {
 }
 
 const statusConfig: Record<string, { label: string; class: string }> = {
-  open: { label: '投票中', class: 'bg-blue-100 text-blue-700' },
-  closed: { label: '已关闭', class: 'bg-gray-100 text-gray-600' },
-  passed: { label: '已通过', class: 'bg-green-100 text-green-700' },
-  failed: { label: '未通过', class: 'bg-red-100 text-red-600' },
+  open: { label: '投票中', class: 'bg-primary/10 text-primary' },
+  closed: { label: '已关闭', class: 'bg-secondary text-muted-foreground' },
+  passed: { label: '已通过', class: 'bg-green-500/10 text-green-400' },
+  failed: { label: '未通过', class: 'bg-destructive/10 text-destructive' },
 };
 
 function formatDate(iso: string) {
@@ -52,7 +52,7 @@ function formatDate(iso: string) {
   <div class="p-6 max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-foreground">投票会议</h1>
+        <h1 class="text-2xl font-heading font-bold text-foreground">投票会议</h1>
         <p class="text-sm text-muted-foreground mt-0.5">工分审核与固化</p>
       </div>
     </div>
@@ -62,11 +62,11 @@ function formatDate(iso: string) {
       <button
         v-for="p in projects"
         :key="p.id"
-        class="px-4 py-1.5 text-sm rounded-full whitespace-nowrap transition-colors border"
+        class="px-4 py-1.5 text-sm rounded-full whitespace-nowrap transition-colors duration-200 border cursor-pointer"
         :class="
           selectedProjectId === p.id
             ? 'bg-primary text-primary-foreground border-primary'
-            : 'border-border text-muted-foreground hover:bg-accent'
+            : 'border-border text-muted-foreground hover:bg-white/5'
         "
         @click="
           selectedProjectId = p.id;
@@ -79,7 +79,7 @@ function formatDate(iso: string) {
 
     <!-- Sessions list -->
     <div v-if="loading" class="space-y-3">
-      <div v-for="i in 2" :key="i" class="h-20 bg-muted rounded-lg animate-pulse" />
+      <div v-for="i in 2" :key="i" class="h-20 bg-secondary rounded-lg animate-pulse" />
     </div>
 
     <div
@@ -93,7 +93,7 @@ function formatDate(iso: string) {
       <div
         v-for="session in sessions"
         :key="session.id"
-        class="bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer"
+        class="glass-card-hover p-4 cursor-pointer"
         @click="router.push(`/vote/${session.id}`)"
       >
         <div class="flex items-center justify-between">
@@ -104,9 +104,9 @@ function formatDate(iso: string) {
             >
               {{ statusConfig[session.status]?.label }}
             </span>
-            <span class="text-sm text-muted-foreground">{{ session.taskIds.length }} 个任务</span>
+            <span class="text-sm font-mono text-muted-foreground">{{ session.taskIds.length }} 个任务</span>
           </div>
-          <span class="text-xs text-muted-foreground">{{ formatDate(session.createdAt) }}</span>
+          <span class="text-xs font-mono text-muted-foreground">{{ formatDate(session.createdAt) }}</span>
         </div>
 
         <!-- Result bar if closed -->
@@ -114,7 +114,7 @@ function formatDate(iso: string) {
           v-if="session.status === 'passed' || session.status === 'failed'"
           class="mt-3"
         >
-          <div class="flex justify-between text-xs text-muted-foreground mb-1">
+          <div class="flex justify-between text-xs font-mono text-muted-foreground mb-1">
             <span>
               加权赞成率
               {{ ((session.result.weightedYesRatio ?? 0) * 100).toFixed(0) }}%
@@ -123,10 +123,10 @@ function formatDate(iso: string) {
               参与率 {{ ((session.result.participationRatio ?? 0) * 100).toFixed(0) }}%
             </span>
           </div>
-          <div class="h-2 bg-muted rounded-full overflow-hidden">
+          <div class="h-2 bg-secondary rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all"
-              :class="session.status === 'passed' ? 'bg-green-500' : 'bg-red-400'"
+              :class="session.status === 'passed' ? 'bg-green-500' : 'bg-destructive'"
               :style="{ width: `${(session.result.weightedYesRatio ?? 0) * 100}%` }"
             />
           </div>

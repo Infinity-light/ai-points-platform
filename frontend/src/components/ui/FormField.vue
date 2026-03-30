@@ -9,7 +9,7 @@ defineProps<{
 
 <template>
   <div class="space-y-1.5">
-    <label class="block text-sm font-medium text-foreground">
+    <label class="block text-sm font-medium text-muted-foreground">
       {{ label }}<span v-if="required" class="text-destructive ml-0.5">*</span>
     </label>
     <slot />

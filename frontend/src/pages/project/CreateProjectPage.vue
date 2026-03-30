@@ -5,6 +5,7 @@ import { projectApi } from '@/services/project';
 import FormField from '@/components/ui/FormField.vue';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import { ChevronLeft } from 'lucide-vue-next';
 
 const router = useRouter();
 const loading = ref(false);
@@ -57,13 +58,11 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
 <template>
   <div class="p-6 max-w-2xl mx-auto">
     <div class="flex items-center gap-3 mb-6">
-      <button class="text-muted-foreground hover:text-foreground transition-colors" @click="router.back()">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
+      <button class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer" @click="router.back()">
+        <ChevronLeft class="w-5 h-5" />
       </button>
       <div>
-        <h1 class="text-xl font-bold text-foreground">创建项目</h1>
+        <h1 class="text-xl font-heading font-bold text-foreground">创建项目</h1>
         <p class="text-xs text-muted-foreground">配置项目基本信息和工分规则</p>
       </div>
     </div>
@@ -75,8 +74,8 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
       </div>
 
       <!-- 基本信息 -->
-      <div class="bg-card border border-border rounded-lg p-5 space-y-4">
-        <h2 class="font-semibold text-foreground text-sm uppercase tracking-wide text-muted-foreground">基本信息</h2>
+      <div class="glass-card p-5 space-y-4">
+        <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">基本信息</h2>
 
         <FormField label="项目名称" :error="errors.name" required>
           <BaseInput
@@ -92,25 +91,25 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
             v-model="form.description"
             rows="3"
             placeholder="简述项目目标和背景..."
-            class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-colors"
+            class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-colors duration-200"
           />
         </FormField>
       </div>
 
       <!-- 结算配置 -->
-      <div class="bg-card border border-border rounded-lg p-5 space-y-4">
-        <h2 class="font-semibold text-sm uppercase tracking-wide text-muted-foreground">结算周期</h2>
+      <div class="glass-card p-5 space-y-4">
+        <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">结算周期</h2>
 
         <div class="flex gap-3">
           <label
             v-for="opt in [{ value: 'weekly', label: '每周结算' }, { value: 'monthly', label: '每月结算' }]"
             :key="opt.value"
-            class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors"
-            :class="form.periodType === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'"
+            class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200"
+            :class="form.periodType === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:bg-white/5'"
           >
             <input type="radio" :value="opt.value" v-model="form.periodType" class="sr-only" />
             <div
-              class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+              class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200"
               :class="form.periodType === opt.value ? 'border-primary' : 'border-border'"
             >
               <div v-if="form.periodType === opt.value" class="w-2 h-2 rounded-full bg-primary" />
@@ -126,10 +125,10 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
               v-for="(day, i) in weekdays"
               :key="i"
               type="button"
-              class="px-3 py-1.5 text-xs rounded-md border transition-colors"
+              class="px-3 py-1.5 text-xs rounded-md border transition-colors duration-200 cursor-pointer"
               :class="form.dayOfWeek === i
                 ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border hover:bg-accent'"
+                : 'border-border hover:bg-white/5'"
               @click="form.dayOfWeek = i"
             >
               {{ day }}
@@ -138,7 +137,7 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
         </div>
 
         <div v-else class="space-y-1.5">
-          <label class="text-sm font-medium text-foreground">每月第 <span class="text-primary font-bold">{{ form.dayOfMonth }}</span> 天</label>
+          <label class="text-sm font-medium text-foreground">每月第 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 天</label>
           <input
             type="range"
             v-model.number="form.dayOfMonth"
@@ -152,15 +151,15 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
       </div>
 
       <!-- 退火配置 -->
-      <div class="bg-card border border-border rounded-lg p-5 space-y-4">
+      <div class="glass-card p-5 space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold text-sm uppercase tracking-wide text-muted-foreground">工分退火</h2>
-          <span class="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">防贡献固化</span>
+          <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">工分退火</h2>
+          <span class="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">防贡献固化</span>
         </div>
 
-        <div class="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
-          每经过 <span class="font-medium text-foreground">{{ form.cyclesPerStep }}</span> 次结算，活跃工分衰减一档（×1 → ×½ → ×⅓…），
-          超过 <span class="font-medium text-foreground">{{ form.maxSteps }}</span> 档后清零。
+        <div class="bg-secondary/50 rounded-lg p-3 text-xs text-muted-foreground">
+          每经过 <span class="font-mono font-medium text-foreground">{{ form.cyclesPerStep }}</span> 次结算，活跃工分衰减一档（×1 → ×½ → ×⅓…），
+          超过 <span class="font-mono font-medium text-foreground">{{ form.maxSteps }}</span> 档后清零。
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -170,7 +169,7 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
               type="number"
               v-model.number="form.cyclesPerStep"
               min="1" max="12"
-              class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring transition-colors duration-200"
             />
           </div>
           <div class="space-y-1.5">
@@ -179,15 +178,15 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
               type="number"
               v-model.number="form.maxSteps"
               min="3" max="20"
-              class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring transition-colors duration-200"
             />
           </div>
         </div>
       </div>
 
       <div class="flex gap-3">
-        <BaseButton type="button" variant="outline" class="flex-1" @click="router.back()">取消</BaseButton>
-        <BaseButton type="submit" class="flex-1" :loading="loading">创建项目</BaseButton>
+        <BaseButton type="button" variant="outline" class="flex-1 transition-colors duration-200" @click="router.back()">取消</BaseButton>
+        <BaseButton type="submit" class="flex-1 transition-colors duration-200" :loading="loading">创建项目</BaseButton>
       </div>
     </form>
   </div>

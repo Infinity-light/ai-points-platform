@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { projectApi, type Project } from '@/services/project';
 import { taskApi, submissionApi, type Task, type TaskStatus, type Submission } from '@/services/task';
+import { ChevronLeft, Plus, X, ChevronDown, Brain, ExternalLink } from 'lucide-vue-next';
 import { dividendApi, type Dividend } from '@/services/dividend';
 import { skillApi, type Skill } from '@/services/skill';
 import { pointsApi, type PointsTableRow } from '@/services/points';
@@ -314,10 +315,10 @@ const dividendStatusConfig: Record<
   Dividend['status'],
   { label: string; class: string }
 > = {
-  draft: { label: '草稿', class: 'bg-gray-100 text-gray-600' },
-  pending_approval: { label: '待审批', class: 'bg-amber-100 text-amber-700' },
-  approved: { label: '已审批', class: 'bg-green-100 text-green-700' },
-  rejected: { label: '已驳回', class: 'bg-red-100 text-red-600' },
+  draft: { label: '草稿', class: 'bg-secondary text-muted-foreground' },
+  pending_approval: { label: '待审批', class: 'bg-yellow-500/10 text-yellow-400' },
+  approved: { label: '已审批', class: 'bg-green-500/10 text-green-400' },
+  rejected: { label: '已驳回', class: 'bg-destructive/10 text-destructive' },
 };
 
 const aiScoreLabels: Record<string, string> = {
@@ -355,8 +356,8 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
   <div class="p-6 max-w-6xl mx-auto">
     <!-- Loading -->
     <div v-if="loading" class="space-y-4">
-      <div class="h-8 bg-muted rounded w-1/3 animate-pulse" />
-      <div class="h-4 bg-muted rounded w-1/2 animate-pulse" />
+      <div class="h-8 bg-secondary rounded w-1/3 animate-pulse" />
+      <div class="h-4 bg-secondary rounded w-1/2 animate-pulse" />
     </div>
 
     <template v-else-if="project">
@@ -364,29 +365,27 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <div class="flex items-start justify-between mb-6">
         <div class="flex items-center gap-3">
           <button
-            class="text-muted-foreground hover:text-foreground transition-colors"
+            class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
             @click="router.push('/projects')"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeft class="w-5 h-5" />
           </button>
           <div>
-            <h1 class="text-2xl font-bold text-foreground">{{ project.name }}</h1>
+            <h1 class="text-2xl font-heading font-bold text-foreground">{{ project.name }}</h1>
             <p v-if="project.description" class="text-sm text-muted-foreground mt-0.5">
               {{ project.description }}
             </p>
           </div>
         </div>
         <div class="flex gap-2 items-center">
-          <span class="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+          <span class="text-xs font-mono bg-secondary text-muted-foreground px-2 py-1 rounded">
             第 {{ project.settlementRound }} 轮
           </span>
           <router-link
             :to="`/projects/${projectId}/brain`"
-            class="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors px-3 py-1 rounded-full font-medium"
+            class="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200 px-3 py-1 rounded-full font-medium cursor-pointer"
           >
-            <span class="text-sm leading-none">&#129504;</span>
+            <Brain class="w-3.5 h-3.5" />
             智脑
           </router-link>
         </div>
@@ -398,7 +397,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
           <button
             v-for="tab in tabDefs"
             :key="tab.key"
-            class="pb-3 text-sm font-medium transition-colors border-b-2 -mb-px"
+            class="pb-3 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer"
             :class="
               activeTab === tab.key
                 ? 'border-primary text-primary'
@@ -414,7 +413,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <!-- ── 任务 Tab ──────────────────────────────────────────────────────── -->
       <div v-if="activeTab === 'tasks'" class="flex gap-4 items-start">
         <!-- Task table section -->
-        <div class="flex-1 min-w-0 bg-card border border-border rounded-lg">
+        <div class="flex-1 min-w-0 glass-card">
           <!-- Table header -->
           <div class="flex items-center justify-between px-4 py-3 border-b border-border">
             <div class="flex items-center gap-2 overflow-x-auto">
@@ -432,16 +431,14 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                 {{ opt.label }}
               </button>
             </div>
-            <BaseButton size="sm" @click="showCreateTask = !showCreateTask">
-              <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
+            <BaseButton size="sm" class="transition-colors duration-200" @click="showCreateTask = !showCreateTask">
+              <Plus class="w-3.5 h-3.5 mr-1" />
               新任务
             </BaseButton>
           </div>
 
           <!-- Quick create task row -->
-          <div v-if="showCreateTask" class="px-4 py-3 border-b border-border bg-muted/30">
+          <div v-if="showCreateTask" class="px-4 py-3 border-b border-border bg-secondary/30">
             <div class="flex items-center gap-3">
               <input
                 v-model="newTaskTitle"
@@ -480,8 +477,8 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
             <div
               v-for="task in filteredTasks"
               :key="task.id"
-              class="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
-              :class="{ 'bg-muted/40': selectedTask?.id === task.id }"
+              class="flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors duration-200 cursor-pointer"
+              :class="{ 'bg-secondary/40': selectedTask?.id === task.id }"
               @click="selectTask(task)"
             >
               <StatusBadge :status="task.status" />
@@ -501,10 +498,10 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                 <span>AI分</span>
               </div>
               <div class="text-xs text-muted-foreground w-16 text-right">
-                <span v-if="task.metadata?.finalPoints" class="text-green-600 font-medium">
+                <span v-if="task.metadata?.finalPoints" class="text-green-400 font-mono font-medium">
                   {{ task.metadata.finalPoints }}分
                 </span>
-                <span v-else-if="task.estimatedPoints" class="text-muted-foreground">
+                <span v-else-if="task.estimatedPoints" class="font-mono text-muted-foreground">
                   ~{{ task.estimatedPoints }}分
                 </span>
               </div>
@@ -538,25 +535,18 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
         <!-- Side panel -->
         <div
           v-if="selectedTask"
-          class="w-80 shrink-0 border border-border rounded-lg bg-card overflow-auto"
+          class="w-80 shrink-0 glass-card overflow-auto"
           style="max-height: calc(100vh - 12rem);"
         >
           <div
-            class="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10"
+            class="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-card/80 z-10"
           >
             <h3 class="font-medium text-sm text-foreground">任务详情</h3>
             <button
-              class="text-muted-foreground hover:text-foreground"
+              class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
               @click="selectedTask = null"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X class="w-4 h-4" />
             </button>
           </div>
 
@@ -580,7 +570,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                     {{ selectedTask.metadata.aiScores[key as keyof typeof selectedTask.metadata.aiScores] }}/5
                   </span>
                 </div>
-                <div class="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div class="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
                     class="h-full bg-primary rounded-full transition-all"
                     :style="{
@@ -608,17 +598,17 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               <div
                 v-for="sub in taskSubmissions"
                 :key="sub.id"
-                class="bg-muted/50 rounded-md p-2 text-xs space-y-1"
+                class="bg-secondary/50 rounded-md p-2 text-xs space-y-1"
               >
                 <div class="flex items-center justify-between">
                   <span class="font-medium capitalize">{{ sub.type }}</span>
                   <span
                     class="px-1.5 py-0.5 rounded text-xs"
                     :class="{
-                      'bg-amber-100 text-amber-700': sub.aiReviewStatus === 'pending',
-                      'bg-blue-100 text-blue-700': sub.aiReviewStatus === 'processing',
-                      'bg-green-100 text-green-700': sub.aiReviewStatus === 'completed',
-                      'bg-red-100 text-red-600': sub.aiReviewStatus === 'failed',
+                      'bg-yellow-500/10 text-yellow-400': sub.aiReviewStatus === 'pending',
+                      'bg-primary/10 text-primary': sub.aiReviewStatus === 'processing',
+                      'bg-green-500/10 text-green-400': sub.aiReviewStatus === 'completed',
+                      'bg-destructive/10 text-destructive': sub.aiReviewStatus === 'failed',
                     }"
                   >
                     {{ reviewStatusLabel[sub.aiReviewStatus] }}
@@ -634,7 +624,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <!-- ── 公分表 Tab ─────────────────────────────────────────────────────── -->
       <div v-else-if="activeTab === 'points'">
         <div v-if="pointsLoading" class="space-y-2">
-          <div v-for="i in 5" :key="i" class="h-12 bg-muted rounded animate-pulse" />
+          <div v-for="i in 5" :key="i" class="h-12 bg-secondary rounded animate-pulse" />
         </div>
         <div
           v-else-if="pointsError"
@@ -644,21 +634,21 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
         </div>
         <template v-else>
           <!-- 整体摘要 -->
-          <div class="bg-card border border-border rounded-lg p-4 mb-4 flex items-center justify-between">
+          <div class="glass-card p-4 mb-4 flex items-center justify-between">
             <div>
-              <p class="text-sm text-muted-foreground">整体工分活跃度</p>
-              <p class="text-xs text-muted-foreground mt-0.5">
+              <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">整体工分活跃度</p>
+              <p class="text-xs font-mono text-muted-foreground mt-0.5">
                 活跃 {{ pointsTotalActive }} / 历史 {{ pointsTotalOriginal }}
               </p>
             </div>
             <div class="flex items-center gap-3">
-              <div class="w-32 h-2.5 bg-muted rounded-full overflow-hidden">
+              <div class="w-32 h-2.5 bg-secondary rounded-full overflow-hidden">
                 <div
                   class="h-full bg-primary rounded-full transition-all"
                   :style="{ width: `${overallActivityRatio * 100}%` }"
                 />
               </div>
-              <span class="text-sm font-medium text-foreground">
+              <span class="text-sm font-mono font-medium text-foreground">
                 {{ (overallActivityRatio * 100).toFixed(0) }}%
               </span>
             </div>
@@ -671,38 +661,38 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
           >
             暂无工分数据
           </div>
-          <div v-else class="bg-card border border-border rounded-lg overflow-hidden">
+          <div v-else class="glass-card overflow-hidden">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-border text-left text-muted-foreground">
-                  <th class="px-4 py-3 font-medium">排名</th>
-                  <th class="px-4 py-3 font-medium">成员</th>
-                  <th class="px-4 py-3 font-medium text-right">历史工分</th>
-                  <th class="px-4 py-3 font-medium text-right">活跃工分</th>
-                  <th class="px-4 py-3 font-medium w-48">占比</th>
+                <tr class="border-b border-border text-left">
+                  <th class="px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">排名</th>
+                  <th class="px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">成员</th>
+                  <th class="px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">历史工分</th>
+                  <th class="px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">活跃工分</th>
+                  <th class="px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider w-48">占比</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border">
                 <tr
                   v-for="(row, index) in pointsRows"
                   :key="row.userId"
-                  class="hover:bg-accent/30 transition-colors"
+                  class="hover:bg-white/5 transition-colors duration-200"
                 >
-                  <td class="px-4 py-3 text-muted-foreground font-medium">
+                  <td class="px-4 py-3 font-mono text-muted-foreground font-medium">
                     {{ index + 1 }}
                   </td>
                   <td class="px-4 py-3 font-medium text-foreground">{{ row.userName }}</td>
-                  <td class="px-4 py-3 text-right text-muted-foreground">{{ row.originalTotal }}</td>
-                  <td class="px-4 py-3 text-right font-medium text-primary">{{ row.activeTotal }}</td>
+                  <td class="px-4 py-3 text-right font-mono text-muted-foreground">{{ row.originalTotal }}</td>
+                  <td class="px-4 py-3 text-right font-mono font-medium text-primary">{{ row.activeTotal }}</td>
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-2">
-                      <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div class="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           class="h-full bg-primary rounded-full"
                           :style="{ width: `${row.ratio * 100}%` }"
                         />
                       </div>
-                      <span class="text-xs text-muted-foreground w-12 text-right">
+                      <span class="text-xs font-mono text-muted-foreground w-12 text-right">
                         {{ (row.ratio * 100).toFixed(1) }}%
                       </span>
                     </div>
@@ -717,7 +707,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <!-- ── 分红 Tab ───────────────────────────────────────────────────────── -->
       <div v-else-if="activeTab === 'dividends'">
         <div v-if="dividendsLoading" class="space-y-2">
-          <div v-for="i in 3" :key="i" class="h-16 bg-muted rounded animate-pulse" />
+          <div v-for="i in 3" :key="i" class="h-16 bg-secondary rounded animate-pulse" />
         </div>
         <div
           v-else-if="dividendsError"
@@ -735,11 +725,11 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
           <div
             v-for="dividend in dividends"
             :key="dividend.id"
-            class="bg-card border border-border rounded-lg overflow-hidden"
+            class="glass-card overflow-hidden"
           >
             <!-- 分红行 -->
             <div
-              class="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+              class="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors duration-200"
               @click="toggleDividendDetail(dividend)"
             >
               <div class="flex-1 min-w-0">
@@ -803,20 +793,10 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               </div>
 
               <!-- 展开箭头 -->
-              <svg
+              <ChevronDown
                 class="w-4 h-4 text-muted-foreground transition-transform"
                 :class="expandedDividendId === dividend.id ? 'rotate-180' : ''"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              />
             </div>
 
             <!-- 展开详情 -->
@@ -825,7 +805,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               class="border-t border-border px-4 py-3"
             >
               <div v-if="dividendDetailLoading" class="space-y-2">
-                <div v-for="i in 3" :key="i" class="h-8 bg-muted rounded animate-pulse" />
+                <div v-for="i in 3" :key="i" class="h-8 bg-secondary rounded animate-pulse" />
               </div>
               <div v-else-if="dividendDetail">
                 <table class="w-full text-sm">
@@ -841,7 +821,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                     <tr
                       v-for="(entry, userId) in dividendDetail.details"
                       :key="userId"
-                      class="hover:bg-muted/20"
+                      class="hover:bg-white/5 transition-colors duration-200"
                     >
                       <td class="py-2 font-medium text-foreground">{{ entry.userName }}</td>
                       <td class="py-2 text-right text-muted-foreground">{{ entry.activePoints }}</td>
@@ -868,7 +848,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <!-- ── Skill Tab ──────────────────────────────────────────────────────── -->
       <div v-else-if="activeTab === 'skills'">
         <div v-if="skillsLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="i in 6" :key="i" class="h-32 bg-muted rounded-lg animate-pulse" />
+          <div v-for="i in 6" :key="i" class="h-32 bg-secondary rounded-lg animate-pulse" />
         </div>
         <div
           v-else-if="skillsError"
@@ -886,12 +866,12 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
           <div
             v-for="skill in skills"
             :key="skill.id"
-            class="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+            class="glass-card-hover p-4 cursor-pointer"
             @click="openSkillDetail(skill)"
           >
             <div class="flex items-start justify-between gap-2 mb-2">
               <h3 class="font-medium text-sm text-foreground line-clamp-1">{{ skill.name }}</h3>
-              <span class="shrink-0 text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono">
+              <span class="shrink-0 text-xs bg-secondary text-muted-foreground px-1.5 py-0.5 rounded font-mono">
                 v{{ skill.version }}
               </span>
             </div>
@@ -901,13 +881,13 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                 class="inline-flex items-center px-1.5 py-0.5 rounded text-xs"
                 :class="
                   skill.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-500'
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-secondary text-muted-foreground'
                 "
               >
                 {{ skill.status === 'active' ? '活跃' : '已弃用' }}
               </span>
-              <span>{{ formatDate(skill.updatedAt) }}</span>
+              <span class="font-mono">{{ formatDate(skill.updatedAt) }}</span>
             </div>
           </div>
         </div>
@@ -915,57 +895,47 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
         <!-- Skill 详情面板（浮层） -->
         <div
           v-if="selectedSkill"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           @click.self="selectedSkill = null"
         >
-          <div class="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
+          <div class="glass-card shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
             <div
               class="flex items-center justify-between px-6 py-4 border-b border-border"
             >
               <div class="flex items-center gap-3">
                 <h2 class="font-semibold text-foreground">{{ selectedSkill.name }}</h2>
-                <span class="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono">
+                <span class="text-xs bg-secondary text-muted-foreground px-2 py-0.5 rounded font-mono">
                   v{{ selectedSkill.version }}
                 </span>
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs"
                   :class="
                     selectedSkill.status === 'active'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                      ? 'bg-green-500/10 text-green-400'
+                      : 'bg-secondary text-muted-foreground'
                   "
                 >
                   {{ selectedSkill.status === 'active' ? '活跃' : '已弃用' }}
                 </span>
               </div>
               <button
-                class="text-muted-foreground hover:text-foreground transition-colors"
+                class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
                 @click="selectedSkill = null"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X class="w-5 h-5" />
               </button>
             </div>
 
             <div class="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
               <div v-if="skillDetailLoading" class="space-y-3">
-                <div class="h-4 bg-muted rounded animate-pulse" />
-                <div class="h-4 bg-muted rounded w-2/3 animate-pulse" />
+                <div class="h-4 bg-secondary rounded animate-pulse" />
+                <div class="h-4 bg-secondary rounded w-2/3 animate-pulse" />
               </div>
               <template v-else>
                 <p class="text-sm text-muted-foreground">{{ selectedSkill.description }}</p>
 
                 <div v-if="selectedSkill.repoUrl" class="flex items-center gap-2">
-                  <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <ExternalLink class="w-4 h-4 text-muted-foreground" />
                   <a
                     :href="selectedSkill.repoUrl"
                     target="_blank"
@@ -980,7 +950,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                   <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                     Skill 内容
                   </p>
-                  <pre class="bg-muted/50 rounded-lg p-3 text-xs text-foreground overflow-x-auto whitespace-pre-wrap">{{ selectedSkill.content }}</pre>
+                  <pre class="bg-secondary/50 rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{{ selectedSkill.content }}</pre>
                 </div>
 
                 <div class="text-xs text-muted-foreground pt-2 border-t border-border">
@@ -1006,11 +976,11 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
   <!-- Fill Amount Modal -->
   <div
     v-if="showFillAmountModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
     @click.self="showFillAmountModal = false"
   >
-    <div class="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
-      <h3 class="font-semibold text-foreground mb-4">
+    <div class="glass-card shadow-xl w-full max-w-sm mx-4 p-6">
+      <h3 class="font-heading font-semibold text-foreground mb-4">
         填入分红金额 — 第 {{ fillAmountTarget?.roundNumber }} 期
       </h3>
       <div class="space-y-3">

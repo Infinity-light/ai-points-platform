@@ -45,8 +45,8 @@ async function handleSubmit() {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div class="bg-card border border-border rounded-xl w-full max-w-lg shadow-xl" @click.stop>
+    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div class="glass-card border border-border rounded-xl w-full max-w-lg shadow-xl" @click.stop>
         <div class="flex items-center justify-between px-6 py-4 border-b border-border">
           <h3 class="font-semibold text-foreground">提交工作成果</h3>
           <button class="text-muted-foreground hover:text-foreground" @click="emit('close')">
@@ -88,7 +88,7 @@ async function handleSubmit() {
               v-model="form.content"
               rows="5"
               placeholder="详细描述您的工作成果、完成情况、方法等..."
-              class="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              class="w-full px-3 py-2 rounded-md border border-border bg-secondary/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
               @input="error = ''"
             />
           </div>
