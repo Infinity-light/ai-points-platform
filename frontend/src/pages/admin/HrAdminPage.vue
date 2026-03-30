@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { adminApi, type AdminUser, type InviteCode, type TenantStats } from '@/services/admin';
 import { approvalApi, type ApprovalBatch, type ApprovalBatchDetail } from '@/services/points';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import { ChevronDown } from 'lucide-vue-next';
 
 type AdminTab = 'users' | 'invites' | 'stats' | 'approvals';
 
@@ -219,9 +220,9 @@ const approvalStatusConfig: Record<
   ApprovalBatch['status'],
   { label: string; class: string }
 > = {
-  pending: { label: '待审批', class: 'bg-amber-100 text-amber-700' },
-  approved: { label: '已批准', class: 'bg-green-100 text-green-700' },
-  rejected: { label: '已驳回', class: 'bg-red-100 text-red-600' },
+  pending: { label: '待审批', class: 'bg-yellow-500/10 text-yellow-400' },
+  approved: { label: '已批准', class: 'bg-green-500/10 text-green-400' },
+  rejected: { label: '已驳回', class: 'bg-destructive/10 text-destructive' },
 };
 
 onMounted(() => {
@@ -233,7 +234,7 @@ onMounted(() => {
   <div class="p-6 max-w-6xl mx-auto">
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground">管理后台</h1>
+      <h1 class="text-2xl font-heading font-bold text-foreground">管理后台</h1>
       <p class="text-sm text-muted-foreground mt-0.5">HR管理员控制台</p>
     </div>
 
@@ -248,7 +249,7 @@ onMounted(() => {
             { key: 'approvals', label: '工分审批' },
           ]"
           :key="tab.key"
-          class="pb-3 text-sm font-medium transition-colors border-b-2 -mb-px"
+          class="pb-3 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer"
           :class="
             activeTab === tab.key
               ? 'border-primary text-primary'
@@ -264,7 +265,7 @@ onMounted(() => {
     <!-- Users Tab -->
     <div v-if="activeTab === 'users'">
       <div v-if="usersLoading" class="space-y-2">
-        <div v-for="i in 5" :key="i" class="h-12 bg-muted rounded animate-pulse" />
+        <div v-for="i in 5" :key="i" class="h-12 bg-secondary rounded animate-pulse" />
       </div>
       <div
         v-else-if="usersError"
@@ -278,19 +279,19 @@ onMounted(() => {
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-border text-left text-muted-foreground">
-              <th class="pb-3 font-medium pr-4">姓名</th>
-              <th class="pb-3 font-medium pr-4">邮箱</th>
-              <th class="pb-3 font-medium pr-4">角色</th>
-              <th class="pb-3 font-medium pr-4">邮箱验证</th>
-              <th class="pb-3 font-medium">注册时间</th>
+            <tr class="border-b border-border text-left">
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">姓名</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">邮箱</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">角色</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">邮箱验证</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs">注册时间</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
             <tr
               v-for="user in users"
               :key="user.id"
-              class="hover:bg-accent/30 transition-colors"
+              class="hover:bg-white/5 transition-colors duration-200"
             >
               <td class="py-3 pr-4 font-medium text-foreground">{{ user.name }}</td>
               <td class="py-3 pr-4 text-muted-foreground">{{ user.email }}</td>
@@ -298,7 +299,7 @@ onMounted(() => {
                 <select
                   :value="user.role"
                   :disabled="roleUpdateLoading[user.id]"
-                  class="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                  class="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors duration-200 cursor-pointer"
                   @change="updateRole(user.id, ($event.target as HTMLSelectElement).value)"
                 >
                   <option v-for="r in availableRoles" :key="r.value" :value="r.value">
@@ -311,14 +312,14 @@ onMounted(() => {
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                   :class="
                     user.isEmailVerified
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-yellow-100 text-yellow-700'
+                      ? 'bg-green-500/10 text-green-400'
+                      : 'bg-yellow-500/10 text-yellow-400'
                   "
                 >
                   {{ user.isEmailVerified ? '已验证' : '未验证' }}
                 </span>
               </td>
-              <td class="py-3 text-muted-foreground">{{ formatDate(user.createdAt) }}</td>
+              <td class="py-3 font-mono text-muted-foreground">{{ formatDate(user.createdAt) }}</td>
             </tr>
           </tbody>
         </table>
@@ -328,7 +329,7 @@ onMounted(() => {
     <!-- Invites Tab -->
     <div v-else-if="activeTab === 'invites'">
       <div v-if="invitesLoading" class="space-y-2">
-        <div v-for="i in 4" :key="i" class="h-12 bg-muted rounded animate-pulse" />
+        <div v-for="i in 4" :key="i" class="h-12 bg-secondary rounded animate-pulse" />
       </div>
       <div
         v-else-if="invitesError"
@@ -345,24 +346,24 @@ onMounted(() => {
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-border text-left text-muted-foreground">
-              <th class="pb-3 font-medium pr-4">邀请码</th>
-              <th class="pb-3 font-medium pr-4">备注</th>
-              <th class="pb-3 font-medium pr-4">使用次数</th>
-              <th class="pb-3 font-medium pr-4">状态</th>
-              <th class="pb-3 font-medium pr-4">过期时间</th>
-              <th class="pb-3 font-medium">操作</th>
+            <tr class="border-b border-border text-left">
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">邀请码</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">备注</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">使用次数</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">状态</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs pr-4">过期时间</th>
+              <th class="pb-3 font-medium text-muted-foreground uppercase tracking-wider text-xs">操作</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
             <tr
               v-for="invite in invites"
               :key="invite.id"
-              class="hover:bg-accent/30 transition-colors"
+              class="hover:bg-white/5 transition-colors duration-200"
             >
               <td class="py-3 pr-4 font-mono font-medium text-foreground">{{ invite.code }}</td>
               <td class="py-3 pr-4 text-muted-foreground">{{ invite.note ?? '—' }}</td>
-              <td class="py-3 pr-4 text-muted-foreground">
+              <td class="py-3 pr-4 font-mono text-muted-foreground">
                 {{ invite.usedCount }} / {{ invite.maxUses }}
               </td>
               <td class="py-3 pr-4">
@@ -370,18 +371,18 @@ onMounted(() => {
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                   :class="
                     invite.isActive
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                      ? 'bg-green-500/10 text-green-400'
+                      : 'bg-secondary text-muted-foreground'
                   "
                 >
                   {{ invite.isActive ? '启用' : '停用' }}
                 </span>
               </td>
-              <td class="py-3 pr-4 text-muted-foreground">{{ formatDate(invite.expiresAt) }}</td>
+              <td class="py-3 pr-4 font-mono text-muted-foreground">{{ formatDate(invite.expiresAt) }}</td>
               <td class="py-3">
                 <button
                   :disabled="toggleLoading[invite.id]"
-                  class="text-xs px-3 py-1 rounded border border-border hover:bg-accent transition-colors disabled:opacity-50"
+                  class="text-xs px-3 py-1 rounded border border-border hover:bg-white/5 transition-colors duration-200 disabled:opacity-50 cursor-pointer"
                   @click="toggleInvite(invite.id, !invite.isActive)"
                 >
                   {{ invite.isActive ? '停用' : '启用' }}
@@ -396,7 +397,7 @@ onMounted(() => {
     <!-- Stats Tab -->
     <div v-else-if="activeTab === 'stats'">
       <div v-if="statsLoading" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div v-for="i in 3" :key="i" class="h-28 bg-muted rounded-lg animate-pulse" />
+        <div v-for="i in 3" :key="i" class="h-28 bg-secondary rounded-lg animate-pulse" />
       </div>
       <div
         v-else-if="statsError"
@@ -406,21 +407,21 @@ onMounted(() => {
       </div>
       <div v-else-if="stats">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-card border border-border rounded-lg p-5">
-            <p class="text-sm text-muted-foreground">总用户数</p>
-            <p class="text-3xl font-bold text-foreground mt-1">{{ stats.totalUsers }}</p>
+          <div class="glass-card p-5">
+            <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">总用户数</p>
+            <p class="text-3xl font-mono font-bold text-foreground mt-1">{{ stats.totalUsers }}</p>
           </div>
-          <div class="bg-card border border-border rounded-lg p-5">
-            <p class="text-sm text-muted-foreground">累计发放工分</p>
-            <p class="text-3xl font-bold text-foreground mt-1">{{ stats.totalPointsAwarded }}</p>
+          <div class="glass-card p-5">
+            <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">累计发放工分</p>
+            <p class="text-3xl font-mono font-bold text-foreground mt-1">{{ stats.totalPointsAwarded }}</p>
           </div>
-          <div class="bg-card border border-border rounded-lg p-5">
-            <p class="text-sm text-muted-foreground">有效邀请码</p>
-            <p class="text-3xl font-bold text-foreground mt-1">{{ stats.activeInviteCodes }}</p>
+          <div class="glass-card p-5">
+            <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">有效邀请码</p>
+            <p class="text-3xl font-mono font-bold text-foreground mt-1">{{ stats.activeInviteCodes }}</p>
           </div>
         </div>
-        <div class="bg-card border border-border rounded-lg p-5">
-          <h3 class="text-sm font-semibold text-foreground mb-4">角色分布</h3>
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">角色分布</h3>
           <div class="space-y-3">
             <div
               v-for="(count, role) in stats.usersByRole"
@@ -429,7 +430,7 @@ onMounted(() => {
             >
               <span class="text-sm text-muted-foreground">{{ roleLabel(String(role)) }}</span>
               <div class="flex items-center gap-3">
-                <div class="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                <div class="w-32 h-2 bg-secondary rounded-full overflow-hidden">
                   <div
                     class="h-full bg-primary rounded-full"
                     :style="{
@@ -437,7 +438,7 @@ onMounted(() => {
                     }"
                   />
                 </div>
-                <span class="text-sm font-medium text-foreground w-8 text-right">{{ count }}</span>
+                <span class="text-sm font-mono font-medium text-foreground w-8 text-right">{{ count }}</span>
               </div>
             </div>
           </div>
@@ -448,7 +449,7 @@ onMounted(() => {
     <!-- Approvals Tab -->
     <div v-else-if="activeTab === 'approvals'">
       <div v-if="approvalsLoading" class="space-y-2">
-        <div v-for="i in 4" :key="i" class="h-16 bg-muted rounded animate-pulse" />
+        <div v-for="i in 4" :key="i" class="h-16 bg-secondary rounded animate-pulse" />
       </div>
       <div
         v-else-if="approvalsError"
@@ -466,11 +467,11 @@ onMounted(() => {
         <div
           v-for="batch in approvalBatches"
           :key="batch.id"
-          class="bg-card border border-border rounded-lg overflow-hidden"
+          class="glass-card overflow-hidden"
         >
           <!-- Batch row -->
           <div
-            class="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+            class="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors duration-200"
             @click="toggleBatchDetail(batch)"
           >
             <div class="flex-1 min-w-0">
@@ -492,7 +493,7 @@ onMounted(() => {
             </div>
 
             <div class="text-right shrink-0">
-              <p class="text-sm font-medium text-foreground">{{ batch.totalPoints }} 分</p>
+              <p class="text-sm font-mono font-medium text-foreground">{{ batch.totalPoints }} 分</p>
               <p class="text-xs text-muted-foreground">{{ batch.pointRecordIds.length }} 条记录</p>
             </div>
 
@@ -501,6 +502,7 @@ onMounted(() => {
               <BaseButton
                 v-if="batch.status === 'pending'"
                 size="sm"
+                class="transition-colors duration-200"
                 :loading="actionLoading[batch.id]"
                 @click="approveBatch(batch.id)"
               >
@@ -510,6 +512,7 @@ onMounted(() => {
                 v-if="batch.status === 'pending'"
                 size="sm"
                 variant="outline"
+                class="transition-colors duration-200"
                 :loading="actionLoading[batch.id]"
                 @click="openRejectNote(batch.id)"
               >
@@ -518,20 +521,10 @@ onMounted(() => {
             </div>
 
             <!-- Expand arrow -->
-            <svg
+            <ChevronDown
               class="w-4 h-4 text-muted-foreground transition-transform shrink-0"
               :class="expandedBatchId === batch.id ? 'rotate-180' : ''"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            />
           </div>
 
           <!-- Expanded detail -->
@@ -540,10 +533,10 @@ onMounted(() => {
             class="border-t border-border px-4 py-3"
           >
             <div v-if="batchDetailLoading" class="space-y-2">
-              <div v-for="i in 3" :key="i" class="h-8 bg-muted rounded animate-pulse" />
+              <div v-for="i in 3" :key="i" class="h-8 bg-secondary rounded animate-pulse" />
             </div>
             <div v-else-if="batchDetail">
-              <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 工分明细
               </p>
               <table class="w-full text-sm">
@@ -558,11 +551,11 @@ onMounted(() => {
                   <tr
                     v-for="record in batchDetail.pointRecords"
                     :key="record.id"
-                    class="hover:bg-muted/20"
+                    class="hover:bg-white/5 transition-colors duration-200"
                   >
                     <td class="py-2 text-foreground">{{ record.taskTitle }}</td>
-                    <td class="py-2 text-right font-medium text-primary">{{ record.points }}</td>
-                    <td class="py-2 text-right text-muted-foreground">
+                    <td class="py-2 text-right font-mono font-medium text-primary">{{ record.points }}</td>
+                    <td class="py-2 text-right font-mono text-muted-foreground">
                       {{ formatDateTime(record.acquiredAt) }}
                     </td>
                   </tr>
@@ -582,11 +575,11 @@ onMounted(() => {
   <!-- Reject Note Modal -->
   <div
     v-if="rejectNoteTarget"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
     @click.self="rejectNoteTarget = null"
   >
-    <div class="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
-      <h3 class="font-semibold text-foreground mb-4">驳回工分批次</h3>
+    <div class="glass-card shadow-xl w-full max-w-sm mx-4 p-6">
+      <h3 class="font-heading font-semibold text-foreground mb-4">驳回工分批次</h3>
       <div class="space-y-3">
         <div>
           <label class="block text-sm text-muted-foreground mb-1">驳回备注（可选）</label>
@@ -594,20 +587,20 @@ onMounted(() => {
             v-model="rejectNoteValue"
             rows="3"
             placeholder="填写驳回原因..."
-            class="w-full px-3 py-2 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            class="w-full px-3 py-2 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-colors duration-200"
           />
         </div>
       </div>
       <div class="flex gap-2 mt-4">
         <BaseButton
-          class="flex-1"
+          class="flex-1 transition-colors duration-200"
           variant="outline"
           :loading="rejectNoteTarget ? actionLoading[rejectNoteTarget] : false"
           @click="submitReject"
         >
           确认驳回
         </BaseButton>
-        <BaseButton variant="ghost" class="flex-1" @click="rejectNoteTarget = null">
+        <BaseButton variant="ghost" class="flex-1 transition-colors duration-200" @click="rejectNoteTarget = null">
           取消
         </BaseButton>
       </div>

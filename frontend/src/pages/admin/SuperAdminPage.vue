@@ -134,7 +134,7 @@ function formatDate(dateStr: string): string {
 
 <template>
   <div class="p-6 max-w-5xl mx-auto">
-    <h1 class="text-2xl font-bold text-foreground mb-6">超级管理员面板</h1>
+    <h1 class="text-2xl font-heading font-bold text-foreground mb-6">超级管理员面板</h1>
 
     <!-- Tab navigation -->
     <div class="flex border-b border-border mb-6">
@@ -145,7 +145,7 @@ function formatDate(dateStr: string): string {
           { key: 'ops', label: '运营数据' },
         ] as const)"
         :key="tab.key"
-        class="px-5 py-2 text-sm font-medium border-b-2 transition-colors"
+        class="px-5 py-2 text-sm font-medium border-b-2 transition-colors duration-200 cursor-pointer"
         :class="activeTab === tab.key
           ? 'border-primary text-primary'
           : 'border-transparent text-muted-foreground hover:text-foreground'"
@@ -158,9 +158,9 @@ function formatDate(dateStr: string): string {
     <!-- =================== TENANTS TAB =================== -->
     <div v-if="activeTab === 'tenants'">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-foreground">所有租户</h2>
+        <h2 class="font-heading font-semibold text-foreground">所有租户</h2>
         <button
-          class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors duration-200 cursor-pointer"
           @click="showCreateForm = !showCreateForm"
         >
           新建租户
@@ -170,7 +170,7 @@ function formatDate(dateStr: string): string {
       <!-- Create form -->
       <div
         v-if="showCreateForm"
-        class="bg-card border border-border rounded-xl p-5 mb-4"
+        class="glass-card p-5 mb-4"
       >
         <h3 class="font-medium text-foreground mb-3">新建租户</h3>
         <div class="space-y-3">
@@ -180,7 +180,7 @@ function formatDate(dateStr: string): string {
               v-model="newTenant.name"
               type="text"
               placeholder="例：我的公司"
-              class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
             />
           </div>
           <div>
@@ -189,21 +189,21 @@ function formatDate(dateStr: string): string {
               v-model="newTenant.slug"
               type="text"
               placeholder="例：my-company"
-              class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
             />
             <p class="text-xs text-muted-foreground mt-1">只能包含小写字母、数字和连字符</p>
           </div>
           <p v-if="createError" class="text-sm text-destructive">{{ createError }}</p>
           <div class="flex gap-2">
             <button
-              class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors duration-200 cursor-pointer"
               :disabled="createLoading || !newTenant.name || !newTenant.slug"
               @click="createTenant"
             >
               {{ createLoading ? '创建中...' : '确认创建' }}
             </button>
             <button
-              class="px-4 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              class="px-4 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors duration-200 cursor-pointer"
               @click="showCreateForm = false; createError = ''"
             >
               取消
@@ -217,26 +217,26 @@ function formatDate(dateStr: string): string {
 
       <!-- Loading -->
       <div v-if="tenantsLoading" class="space-y-2">
-        <div v-for="i in 3" :key="i" class="h-14 bg-muted rounded-lg animate-pulse" />
+        <div v-for="i in 3" :key="i" class="h-14 bg-secondary rounded-lg animate-pulse" />
       </div>
 
       <!-- Table -->
-      <div v-else-if="tenants.length > 0" class="bg-card border border-border rounded-xl overflow-hidden">
+      <div v-else-if="tenants.length > 0" class="glass-card overflow-hidden">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-border bg-muted/50">
-              <th class="text-left px-4 py-3 text-muted-foreground font-medium">名称</th>
-              <th class="text-left px-4 py-3 text-muted-foreground font-medium">Slug</th>
-              <th class="text-left px-4 py-3 text-muted-foreground font-medium">状态</th>
-              <th class="text-left px-4 py-3 text-muted-foreground font-medium">创建时间</th>
-              <th class="text-left px-4 py-3 text-muted-foreground font-medium">操作</th>
+            <tr class="border-b border-border bg-secondary/30">
+              <th class="text-left px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">名称</th>
+              <th class="text-left px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">Slug</th>
+              <th class="text-left px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">状态</th>
+              <th class="text-left px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">创建时间</th>
+              <th class="text-left px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="tenant in tenants"
               :key="tenant.id"
-              class="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+              class="border-b border-border last:border-0 hover:bg-white/5 transition-colors duration-200"
             >
               <td class="px-4 py-3 font-medium text-foreground">{{ tenant.name }}</td>
               <td class="px-4 py-3 text-muted-foreground font-mono text-xs">{{ tenant.slug }}</td>
@@ -244,23 +244,23 @@ function formatDate(dateStr: string): string {
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                   :class="tenant.isActive
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'"
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-secondary text-muted-foreground'"
                 >
                   {{ tenant.isActive ? '启用' : '停用' }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-muted-foreground text-xs">{{ formatDate(tenant.createdAt) }}</td>
+              <td class="px-4 py-3 font-mono text-muted-foreground text-xs">{{ formatDate(tenant.createdAt) }}</td>
               <td class="px-4 py-3">
                 <div class="flex gap-2">
                   <button
-                    class="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
+                    class="text-xs px-2 py-1 rounded border border-border hover:bg-white/5 transition-colors duration-200 cursor-pointer"
                     @click="toggleActive(tenant)"
                   >
                     {{ tenant.isActive ? '停用' : '启用' }}
                   </button>
                   <button
-                    class="text-xs px-2 py-1 rounded border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors"
+                    class="text-xs px-2 py-1 rounded border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors duration-200 cursor-pointer"
                     @click="deleteTenant(tenant)"
                   >
                     删除
@@ -277,20 +277,20 @@ function formatDate(dateStr: string): string {
 
     <!-- =================== CONFIG TAB =================== -->
     <div v-else-if="activeTab === 'config'">
-      <h2 class="font-semibold text-foreground mb-4">全局配置</h2>
+      <h2 class="font-heading font-semibold text-foreground mb-4">全局配置</h2>
 
       <div v-if="configLoading" class="space-y-3">
-        <div v-for="i in 3" :key="i" class="h-12 bg-muted rounded-lg animate-pulse" />
+        <div v-for="i in 3" :key="i" class="h-12 bg-secondary rounded-lg animate-pulse" />
       </div>
 
-      <div v-else class="bg-card border border-border rounded-xl p-6 max-w-lg space-y-5">
+      <div v-else class="glass-card p-6 max-w-lg space-y-5">
         <div>
           <label class="block text-sm font-medium text-foreground mb-1">LLM 模型名称</label>
           <input
             v-model="config.llmModel"
             type="text"
             placeholder="claude-sonnet-4-6"
-            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
           />
         </div>
 
@@ -300,7 +300,7 @@ function formatDate(dateStr: string): string {
             v-model="config.llmBaseUrl"
             type="text"
             placeholder="（可选，留空使用默认）"
-            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
           />
         </div>
 
@@ -311,15 +311,15 @@ function formatDate(dateStr: string): string {
             type="number"
             min="1"
             max="500"
-            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
           />
         </div>
 
         <p v-if="configError" class="text-sm text-destructive">{{ configError }}</p>
-        <p v-if="configSuccess" class="text-sm text-green-600 dark:text-green-400">保存成功</p>
+        <p v-if="configSuccess" class="text-sm text-green-400">保存成功</p>
 
         <button
-          class="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          class="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors duration-200 cursor-pointer"
           :disabled="configSaving"
           @click="saveConfig"
         >
@@ -330,35 +330,35 @@ function formatDate(dateStr: string): string {
 
     <!-- =================== OPS TAB =================== -->
     <div v-else-if="activeTab === 'ops'">
-      <h2 class="font-semibold text-foreground mb-4">运营数据</h2>
+      <h2 class="font-heading font-semibold text-foreground mb-4">运营数据</h2>
 
       <div v-if="opsLoading" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div v-for="i in 4" :key="i" class="h-24 bg-muted rounded-xl animate-pulse" />
+        <div v-for="i in 4" :key="i" class="h-24 bg-secondary rounded-xl animate-pulse" />
       </div>
 
       <p v-else-if="opsError" class="text-sm text-destructive">{{ opsError }}</p>
 
       <div v-else-if="ops" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-2">总租户数</p>
-          <p class="text-3xl font-bold text-foreground">{{ ops.totalTenants }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">总租户数</p>
+          <p class="text-3xl font-mono font-bold text-foreground">{{ ops.totalTenants }}</p>
         </div>
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-2">总用户数</p>
-          <p class="text-3xl font-bold text-foreground">{{ ops.totalUsers }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">总用户数</p>
+          <p class="text-3xl font-mono font-bold text-foreground">{{ ops.totalUsers }}</p>
         </div>
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-2">总任务数</p>
-          <p class="text-3xl font-bold text-foreground">{{ ops.totalTasks }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">总任务数</p>
+          <p class="text-3xl font-mono font-bold text-foreground">{{ ops.totalTasks }}</p>
         </div>
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-2">总提交数</p>
-          <p class="text-3xl font-bold text-foreground">{{ ops.totalSubmissions }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">总提交数</p>
+          <p class="text-3xl font-mono font-bold text-foreground">{{ ops.totalSubmissions }}</p>
         </div>
       </div>
 
       <button
-        class="mt-4 px-4 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+        class="mt-4 px-4 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors duration-200 cursor-pointer"
         @click="loadOps"
       >
         刷新

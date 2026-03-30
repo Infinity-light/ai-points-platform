@@ -6,6 +6,8 @@ import { authApi } from '@/services/auth';
 import FormField from '@/components/ui/FormField.vue';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import SpaceBackground from '@/components/SpaceBackground.vue';
+import { Rocket, Brain, Shield, TrendingUp, Eye, EyeOff } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -56,90 +58,139 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background px-4">
-    <div class="w-full max-w-md">
-      <!-- Logo / Title -->
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary mb-4">
-          <svg class="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
+  <div class="relative min-h-screen grid grid-cols-1 lg:grid-cols-2">
+    <SpaceBackground />
+
+    <!-- Left: Brand Panel -->
+    <div class="relative z-10 hidden lg:flex flex-col justify-between p-12 xl:p-16">
+      <!-- Top: Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+          <Rocket class="w-5 h-5 text-primary" />
         </div>
-        <h1 class="text-2xl font-bold text-foreground">AI 积分平台</h1>
-        <p class="text-sm text-muted-foreground mt-1">登录您的账号</p>
+        <div>
+          <span class="font-heading text-lg font-semibold text-foreground">赛托邦</span>
+          <span class="text-xs text-muted-foreground tracking-wider ml-2 uppercase">Cytopia</span>
+        </div>
       </div>
 
-      <!-- Card -->
-      <div class="bg-card border border-border rounded-xl p-8 shadow-sm">
-        <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
-          <!-- Global error -->
-          <div v-if="errors.global"
-            class="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-md">
-            {{ errors.global }}
-          </div>
-
-          <FormField label="组织标识" :error="errors.tenantSlug" required>
-            <BaseInput
-              v-model="form.tenantSlug"
-              placeholder="例如：shenbi-team"
-              :error="!!errors.tenantSlug"
-              autocomplete="organization"
-              @input="errors.tenantSlug = ''"
-            />
-          </FormField>
-
-          <FormField label="邮箱" :error="errors.email" required>
-            <BaseInput
-              v-model="form.email"
-              type="email"
-              placeholder="your@email.com"
-              :error="!!errors.email"
-              autocomplete="email"
-              @input="errors.email = ''"
-            />
-          </FormField>
-
-          <FormField label="密码" :error="errors.password" required>
-            <div class="relative">
-              <BaseInput
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="请输入密码"
-                :error="!!errors.password"
-                autocomplete="current-password"
-                @input="errors.password = ''"
-              />
-              <button
-                type="button"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                @click="showPassword = !showPassword"
-              >
-                <svg v-if="!showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              </button>
-            </div>
-          </FormField>
-
-          <BaseButton type="submit" class="w-full" size="lg" :loading="loading">
-            登录
-          </BaseButton>
-        </form>
-
-        <p class="text-center text-sm text-muted-foreground mt-6">
-          还没有账号？
-          <router-link to="/register" class="text-primary font-medium hover:underline">
-            立即注册
-          </router-link>
+      <!-- Center: Hero -->
+      <div class="flex-1 flex flex-col justify-center max-w-lg">
+        <h2 class="font-heading text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-6">
+          让每一颗创新的种子<br/>
+          <span class="text-lunar">生根发芽</span>
+        </h2>
+        <p class="text-lg text-muted-foreground leading-relaxed">
+          向赛博时代的乌托邦砥砺前行
         </p>
+      </div>
+
+      <!-- Bottom: Features -->
+      <div class="grid grid-cols-3 gap-6">
+        <div class="flex flex-col gap-2">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Brain class="w-4 h-4 text-primary" />
+          </div>
+          <p class="text-sm font-medium text-foreground">AI 智能评审</p>
+          <p class="text-xs text-muted-foreground">三维度自动评分</p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <div class="w-9 h-9 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
+            <Shield class="w-4 h-4 text-accent" />
+          </div>
+          <p class="text-sm font-medium text-foreground">公平工分</p>
+          <p class="text-xs text-muted-foreground">退火机制防固化</p>
+        </div>
+        <div class="flex flex-col gap-2">
+          <div class="w-9 h-9 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+            <TrendingUp class="w-4 h-4 text-green-400" />
+          </div>
+          <p class="text-sm font-medium text-foreground">智能分派</p>
+          <p class="text-xs text-muted-foreground">AI 驱动任务匹配</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Login Form -->
+    <div class="relative z-10 flex items-center justify-center p-6 sm:p-8 lg:p-12">
+      <div class="w-full max-w-sm">
+        <!-- Mobile brand (lg hidden) -->
+        <div class="text-center mb-8 lg:hidden">
+          <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 mb-4">
+            <Rocket class="w-6 h-6 text-primary" />
+          </div>
+          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦 Cytopia</h1>
+          <p class="text-sm text-muted-foreground mt-1">登录您的账号</p>
+        </div>
+
+        <!-- Desktop subtitle -->
+        <div class="hidden lg:block mb-8">
+          <h1 class="font-heading text-2xl font-bold text-foreground">欢迎回来</h1>
+          <p class="text-sm text-muted-foreground mt-1">登录您的赛托邦账号</p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="glass-card p-8">
+          <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
+            <div v-if="errors.global"
+              class="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-md">
+              {{ errors.global }}
+            </div>
+
+            <FormField label="组织标识" :error="errors.tenantSlug" required>
+              <BaseInput
+                v-model="form.tenantSlug"
+                placeholder="例如：shenbi-team"
+                :error="!!errors.tenantSlug"
+                autocomplete="organization"
+                @input="errors.tenantSlug = ''"
+              />
+            </FormField>
+
+            <FormField label="邮箱" :error="errors.email" required>
+              <BaseInput
+                v-model="form.email"
+                type="email"
+                placeholder="your@email.com"
+                :error="!!errors.email"
+                autocomplete="email"
+                @input="errors.email = ''"
+              />
+            </FormField>
+
+            <FormField label="密码" :error="errors.password" required>
+              <div class="relative">
+                <BaseInput
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="请输入密码"
+                  :error="!!errors.password"
+                  autocomplete="current-password"
+                  @input="errors.password = ''"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  @click="showPassword = !showPassword"
+                >
+                  <EyeOff v-if="!showPassword" class="w-4 h-4" />
+                  <Eye v-else class="w-4 h-4" />
+                </button>
+              </div>
+            </FormField>
+
+            <BaseButton type="submit" class="w-full" size="lg" :loading="loading">
+              登录
+            </BaseButton>
+          </form>
+
+          <p class="text-center text-sm text-muted-foreground mt-6">
+            还没有账号？
+            <router-link to="/register" class="text-primary font-medium hover:underline">
+              立即注册
+            </router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>

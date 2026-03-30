@@ -40,10 +40,10 @@ const roleLabels: Record<string, string> = {
 
 <template>
   <div class="p-6 max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold text-foreground mb-6">个人中心</h1>
+    <h1 class="text-2xl font-heading font-bold text-foreground mb-6">个人中心</h1>
 
     <div v-if="loading" class="space-y-4">
-      <div v-for="i in 3" :key="i" class="h-24 bg-muted rounded-lg animate-pulse" />
+      <div v-for="i in 3" :key="i" class="h-24 bg-secondary rounded-lg animate-pulse" />
     </div>
 
     <template v-else>
@@ -56,7 +56,7 @@ const roleLabels: Record<string, string> = {
       </div>
 
       <!-- User info card -->
-      <div class="bg-card border border-border rounded-xl p-6 mb-6">
+      <div class="glass-card p-6 mb-6">
         <div class="flex items-center gap-4">
           <div
             class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary"
@@ -64,10 +64,10 @@ const roleLabels: Record<string, string> = {
             {{ authStore.user?.name?.[0] ?? '?' }}
           </div>
           <div>
-            <p class="text-xl font-bold text-foreground">{{ authStore.user?.name }}</p>
+            <p class="text-xl font-heading font-bold text-foreground">{{ authStore.user?.name }}</p>
             <p class="text-sm text-muted-foreground">{{ authStore.user?.email }}</p>
             <span
-              class="inline-block mt-1 px-2 py-0.5 text-xs bg-muted rounded-full text-muted-foreground"
+              class="inline-block mt-1 px-2 py-0.5 text-xs bg-secondary rounded-full text-muted-foreground"
             >
               {{ roleLabels[authStore.user?.role ?? ''] ?? authStore.user?.role }}
             </span>
@@ -77,27 +77,27 @@ const roleLabels: Record<string, string> = {
 
       <!-- Points overview -->
       <div class="grid grid-cols-2 gap-4 mb-6">
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-1">总工分</p>
-          <p class="text-3xl font-bold text-foreground">{{ totalOriginal }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">总工分</p>
+          <p class="text-3xl font-mono font-bold text-foreground">{{ totalOriginal }}</p>
           <p class="text-xs text-muted-foreground mt-1">历史积累</p>
         </div>
-        <div class="bg-card border border-border rounded-xl p-5">
-          <p class="text-sm text-muted-foreground mb-1">活跃工分</p>
-          <p class="text-3xl font-bold text-primary">{{ totalActive }}</p>
+        <div class="glass-card p-5">
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">活跃工分</p>
+          <p class="text-3xl font-mono font-bold text-primary">{{ totalActive }}</p>
           <p class="text-xs text-muted-foreground mt-1">退火后有效</p>
         </div>
       </div>
 
       <!-- Annealing visualization -->
-      <div class="bg-card border border-border rounded-xl p-5 mb-6">
+      <div class="glass-card p-5 mb-6">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="font-semibold text-foreground">工分活跃度</h2>
-          <span class="text-sm text-muted-foreground">
+          <h2 class="font-heading font-semibold text-foreground">工分活跃度</h2>
+          <span class="text-sm font-mono text-muted-foreground">
             {{ (annealingRatio * 100).toFixed(0) }}% 活跃
           </span>
         </div>
-        <div class="h-3 bg-muted rounded-full overflow-hidden">
+        <div class="h-3 bg-secondary rounded-full overflow-hidden">
           <div
             class="h-full bg-primary rounded-full transition-all duration-500"
             :style="{ width: `${annealingRatio * 100}%` }"
@@ -110,7 +110,7 @@ const roleLabels: Record<string, string> = {
 
       <!-- Per project breakdown -->
       <div class="space-y-3">
-        <h2 class="font-semibold text-foreground">项目工分明细</h2>
+        <h2 class="font-heading font-semibold text-foreground">项目工分明细</h2>
         <div
           v-if="projectPoints.length === 0"
           class="text-sm text-muted-foreground py-4 text-center"
@@ -120,19 +120,19 @@ const roleLabels: Record<string, string> = {
         <div
           v-for="pp in projectPoints"
           :key="pp.projectId"
-          class="bg-card border border-border rounded-lg p-4"
+          class="glass-card p-4"
         >
           <div class="flex items-center justify-between mb-2">
             <p class="font-medium text-sm text-foreground">{{ pp.projectName }}</p>
-            <span class="text-xs text-muted-foreground">第 {{ pp.currentRound }} 结算轮</span>
+            <span class="text-xs font-mono text-muted-foreground">第 {{ pp.currentRound }} 结算轮</span>
           </div>
           <div class="grid grid-cols-2 gap-3 text-center mb-3">
-            <div class="bg-muted/50 rounded-md py-2">
-              <p class="text-lg font-bold text-foreground">{{ pp.originalTotal }}</p>
+            <div class="bg-secondary/50 rounded-md py-2">
+              <p class="text-lg font-mono font-bold text-foreground">{{ pp.originalTotal }}</p>
               <p class="text-xs text-muted-foreground">历史工分</p>
             </div>
-            <div class="bg-primary/5 rounded-md py-2">
-              <p class="text-lg font-bold text-primary">{{ pp.activeTotal }}</p>
+            <div class="bg-primary/10 rounded-md py-2">
+              <p class="text-lg font-mono font-bold text-primary">{{ pp.activeTotal }}</p>
               <p class="text-xs text-muted-foreground">活跃工分</p>
             </div>
           </div>
@@ -145,7 +145,7 @@ const roleLabels: Record<string, string> = {
             </span>
             <span class="text-border">·</span>
             <span class="flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+              <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
               待审批 {{ pp.pendingCount }}
             </span>
             <span class="text-border">·</span>
@@ -156,7 +156,7 @@ const roleLabels: Record<string, string> = {
           </div>
 
           <div v-if="pp.originalTotal > 0" class="mt-2">
-            <div class="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div class="h-1.5 bg-secondary rounded-full overflow-hidden">
               <div
                 class="h-full bg-primary rounded-full"
                 :style="{ width: `${(pp.activeTotal / pp.originalTotal) * 100}%` }"
