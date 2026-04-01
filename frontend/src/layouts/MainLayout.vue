@@ -82,6 +82,7 @@ const permissionStore = usePermissionStore();
 
 const isAdminVisible = computed(
   () =>
+    !permissionStore.loaded ||
     permissionStore.can('read', 'users') ||
     permissionStore.can('read', 'roles') ||
     permissionStore.can('read', 'tenants') ||

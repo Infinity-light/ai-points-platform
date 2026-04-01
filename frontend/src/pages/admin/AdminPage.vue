@@ -97,9 +97,17 @@ function switchTab(key: string) {
       <p class="text-sm text-muted-foreground mt-0.5">统一管理控制台</p>
     </div>
 
+    <!-- 加载中 -->
+    <div
+      v-if="!permissionStore.loaded"
+      class="space-y-3 mt-4"
+    >
+      <div v-for="i in 5" :key="i" class="h-12 bg-secondary rounded-lg animate-pulse" />
+    </div>
+
     <!-- 无权限 -->
     <div
-      v-if="visibleTabs.length === 0"
+      v-else-if="visibleTabs.length === 0"
       class="text-center py-16 text-muted-foreground text-sm"
     >
       您没有访问管理后台的权限
