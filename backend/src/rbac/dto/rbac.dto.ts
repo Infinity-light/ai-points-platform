@@ -46,14 +46,14 @@ export class SetPermissionsDto {
 }
 
 export class AssignTenantRoleDto {
-  @IsUUID()
+  @IsUUID('all')
   roleId!: string;
 }
 
 export class AssignProjectRoleDto {
-  @IsUUID()
+  @IsUUID('all')
   projectId!: string;
 
-  @IsUUID()
+  @IsUUID('all')
   roleId!: string;
 }

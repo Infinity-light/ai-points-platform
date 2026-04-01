@@ -297,7 +297,7 @@ onMounted(() => {
               <td class="py-3 pr-4 text-muted-foreground">{{ user.email }}</td>
               <td class="py-3 pr-4">
                 <select
-                  :value="user.role"
+                  :value="user.tenantRoleName ?? ''"
                   :disabled="roleUpdateLoading[user.id]"
                   class="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors duration-200 cursor-pointer"
                   @change="updateRole(user.id, ($event.target as HTMLSelectElement).value)"

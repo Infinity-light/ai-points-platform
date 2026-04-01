@@ -40,11 +40,25 @@ export class AdminService {
     private readonly projectRepo: Repository<Project>,
   ) {}
 
-  async listUsers(tenantId: string): Promise<User[]> {
-    return this.userRepo.find({
+  async listUsers(tenantId: string) {
+    const users = await this.userRepo.find({
       where: { tenantId },
       order: { createdAt: 'DESC' },
     });
+    // Attach tenant role info
+    const userIds = users.map((u) => u.id);
+    const userRoles = userIds.length > 0
+      ? await this.userRoleRepo.find({
+          where: userIds.map((uid) => ({ userId: uid })),
+          relations: ['role'],
+        })
+      : [];
+    const roleMap = new Map(userRoles.map((ur) => [ur.userId, ur]));
+    return users.map((u) => ({
+      ...u,
+      tenantRoleId: roleMap.get(u.id)?.roleId ?? null,
+      tenantRoleName: roleMap.get(u.id)?.role?.name ?? null,
+    }));
   }
 
   async updateUserRole(userId: string, tenantId: string, roleId: string): Promise<UserRole> {

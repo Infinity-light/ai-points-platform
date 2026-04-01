@@ -168,6 +168,7 @@ onMounted(() => {
               <td class="py-3 pr-4">
                 <select
                   :disabled="roleUpdateLoading[user.id] || rolesLoading"
+                  :value="user.tenantRoleId ?? ''"
                   class="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors duration-200 cursor-pointer"
                   @change="updateTenantRole(user.id, ($event.target as HTMLSelectElement).value)"
                 >

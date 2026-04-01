@@ -5,7 +5,8 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: string;
+  tenantRoleId: string | null;
+  tenantRoleName: string | null;
   tenantId: string;
   isEmailVerified: boolean;
   createdAt: string;
