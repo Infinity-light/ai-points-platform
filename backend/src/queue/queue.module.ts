@@ -41,7 +41,6 @@ import { QUEUE_NAMES } from './queue.constants';
       { name: QUEUE_NAMES.AI_REVIEW },
       { name: QUEUE_NAMES.NOTIFICATION },
       { name: QUEUE_NAMES.SETTLEMENT },
-      { name: QUEUE_NAMES.AUCTION_CLOSE },
     ),
     AiModule,
     TaskModule,
