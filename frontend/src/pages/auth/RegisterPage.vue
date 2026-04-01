@@ -7,7 +7,7 @@ import FormField from '@/components/ui/FormField.vue';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import SpaceBackground from '@/components/SpaceBackground.vue';
-import { Rocket, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
+import { Mail, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -188,34 +188,20 @@ function switchMode(newMode: 'join' | 'create') {
     <SpaceBackground />
 
     <!-- Left: Brand Panel -->
-    <div class="relative z-10 hidden lg:flex flex-col justify-between p-12 xl:p-16">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
-          <Rocket class="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <span class="font-heading text-lg font-semibold text-foreground">赛托邦</span>
-          <span class="text-xs text-muted-foreground tracking-wider ml-2 uppercase">Cytopia</span>
-        </div>
-      </div>
-
-      <div class="flex-1 flex items-center justify-center">
-        <div class="relative">
-          <div class="absolute inset-0 -m-20 rounded-full bg-primary/5 blur-3xl"></div>
-          <div class="relative w-72 h-72 xl:w-80 xl:h-80 rounded-full bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.08] flex items-center justify-center">
-            <div class="absolute top-10 left-14 w-10 h-10 rounded-full bg-white/[0.04]"></div>
-            <div class="absolute bottom-16 right-10 w-14 h-14 rounded-full bg-white/[0.03]"></div>
-            <div class="absolute top-20 right-16 w-6 h-6 rounded-full bg-white/[0.04]"></div>
-            <Rocket class="w-20 h-20 xl:w-24 xl:h-24 text-primary -rotate-45" style="filter: drop-shadow(0 0 24px hsl(var(--primary) / 0.4))" />
-          </div>
-          <div class="absolute -top-6 left-8 w-2 h-2 rounded-full bg-primary/50 animate-pulse"></div>
-          <div class="absolute top-12 -right-8 w-1.5 h-1.5 rounded-full bg-accent/50 animate-pulse" style="animation-delay: 0.5s"></div>
-          <div class="absolute -bottom-4 left-20 w-1 h-1 rounded-full bg-primary/40 animate-pulse" style="animation-delay: 1s"></div>
-        </div>
-      </div>
-
-      <div class="text-xs text-muted-foreground">
-        &copy; {{ new Date().getFullYear() }} Cytopia. All rights reserved.
+    <div class="relative z-10 hidden lg:flex flex-col items-center justify-center p-0 overflow-hidden">
+      <img
+        src="/images/rocket-moon.png"
+        alt="Rocket to the Moon"
+        class="absolute inset-0 w-full h-full object-cover"
+      />
+      <div class="absolute inset-0 bg-gradient-to-r from-transparent to-background/80"></div>
+      <div class="relative z-10 text-center px-12">
+        <h2 class="font-heading text-4xl xl:text-5xl font-bold text-white drop-shadow-lg leading-tight">
+          赛托邦
+        </h2>
+        <p class="text-lg text-white/70 mt-3 font-heading tracking-widest uppercase">
+          Cytopia
+        </p>
       </div>
     </div>
 
@@ -224,10 +210,7 @@ function switchMode(newMode: 'join' | 'create') {
       <div class="w-full max-w-sm">
         <!-- Mobile brand -->
         <div class="text-center mb-6 lg:hidden">
-          <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 mb-4">
-            <Rocket class="w-6 h-6 text-primary" />
-          </div>
-          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦 Cytopia</h1>
+          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦 <span class="text-muted-foreground">Cytopia</span></h1>
         </div>
 
         <!-- Desktop subtitle -->
