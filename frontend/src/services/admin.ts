@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import type { UserProjectInfo } from '@/services/rbac';
 
 export interface AdminUser {
   id: string;
@@ -34,8 +35,10 @@ export interface TenantStats {
 
 export const adminApi = {
   listUsers: () => api.get<AdminUser[]>('/admin/users').then((r) => r.data),
-  updateUserRole: (userId: string, role: string) =>
-    api.patch<AdminUser>(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
+  updateUserRole: (userId: string, roleId: string) =>
+    api.patch(`/admin/users/${userId}/role`, { roleId }).then((r) => r.data),
+  getUserProjects: (userId: string) =>
+    api.get<UserProjectInfo[]>(`/admin/users/${userId}/projects`).then((r) => r.data),
   getStats: () => api.get<TenantStats>('/admin/stats').then((r) => r.data),
   listInvites: () => api.get<InviteCode[]>('/admin/invites').then((r) => r.data),
   toggleInvite: (id: string, isActive: boolean) =>

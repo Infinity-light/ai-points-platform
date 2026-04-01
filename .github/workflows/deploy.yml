@@ -133,7 +133,7 @@ jobs:
             # Configure Nginx reverse proxy (idempotent, base64 to avoid YAML heredoc issues)
             echo "Configuring Nginx..."
             sudo apt-get install -y -q nginx certbot python3-certbot-nginx
-            echo "c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIHBvaW50cy5nb2RwZW5haS5jb207CiAgICBjbGllbnRfbWF4X2JvZHlfc2l6ZSA1MG07CiAgICBsb2NhdGlvbiAvIHsKICAgICAgICBwcm94eV9wYXNzIGh0dHA6Ly8xMjcuMC4wLjE6NDEwMDsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIEhvc3QgJGhvc3Q7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBYLVJlYWwtSVAgJHJlbW90ZV9hZGRyOwogICAgICAgIHByb3h5X3JlYWRfdGltZW91dCAzMDBzOwogICAgICAgIHByb3h5X2J1ZmZlcmluZyBvZmY7CiAgICB9Cn0K" | base64 -d | sudo tee /etc/nginx/sites-available/points.godpenai.com
+            echo "c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIHBvaW50cy5nb2RwZW5haS5jb207CiAgICBjbGllbnRfbWF4X2JvZHlfc2l6ZSA1MG07CiAgICBsb2NhdGlvbiAvIHsKICAgICAgICBwcm94eV9wYXNzIGh0dHA6Ly8xMjcuMC4wLjE6NDEwMDsKICAgICAgICBwcm94eV9odHRwX3ZlcnNpb24gMS4xOwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgVXBncmFkZSAkaHR0cF91cGdyYWRlOwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgQ29ubmVjdGlvbiAidXBncmFkZSI7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBIb3N0ICRob3N0OwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgWC1SZWFsLUlQICRyZW1vdGVfYWRkcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLUZvciAkcHJveHlfYWRkX3hfZm9yd2FyZGVkX2ZvcjsKICAgICAgICBwcm94eV9yZWFkX3RpbWVvdXQgMzYwMHM7CiAgICAgICAgcHJveHlfYnVmZmVyaW5nIG9mZjsKICAgIH0KfQo=" | base64 -d | sudo tee /etc/nginx/sites-available/points.godpenai.com
             sudo ln -sf /etc/nginx/sites-available/points.godpenai.com /etc/nginx/sites-enabled/points.godpenai.com
             sudo nginx -t && sudo systemctl reload nginx
             # Obtain / renew SSL certificate (non-interactive, skips if already valid)

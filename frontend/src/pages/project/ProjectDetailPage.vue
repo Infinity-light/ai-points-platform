@@ -3,11 +3,13 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { projectApi, type Project } from '@/services/project';
 import { taskApi, submissionApi, type Task, type TaskStatus, type Submission } from '@/services/task';
-import { ChevronLeft, Plus, X, ChevronDown, Brain, ExternalLink } from 'lucide-vue-next';
+import { ChevronLeft, Plus, X, ChevronDown, Brain, ExternalLink, Video } from 'lucide-vue-next';
 import { dividendApi, type Dividend } from '@/services/dividend';
 import { skillApi, type Skill } from '@/services/skill';
 import { pointsApi, type PointsTableRow } from '@/services/points';
+import { meetingApi } from '@/services/meeting';
 import { useAuthStore } from '@/stores/auth';
+import { usePermissionStore } from '@/stores/permission';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import TaskSubmitModal from '@/components/TaskSubmitModal.vue';
@@ -15,8 +17,26 @@ import TaskSubmitModal from '@/components/TaskSubmitModal.vue';
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const permissionStore = usePermissionStore();
 
 const projectId = computed(() => route.params.id as string);
+
+// ─── 评审会议 ────────────────────────────────────────────────────────────────
+const meetingCreating = ref(false);
+const meetingError = ref('');
+
+async function openReviewMeeting(): Promise<void> {
+  meetingCreating.value = true;
+  meetingError.value = '';
+  try {
+    const res = await meetingApi.create(projectId.value);
+    await router.push(`/meeting/${res.data.id}`);
+  } catch {
+    meetingError.value = '创建评审会议失败，请重试';
+  } finally {
+    meetingCreating.value = false;
+  }
+}
 
 // ─── Tab 状态 ────────────────────────────────────────────────────────────────
 type TabKey = 'tasks' | 'points' | 'dividends' | 'skills';
@@ -333,7 +353,7 @@ const filterOptions: Array<{ value: TaskStatus | 'all'; label: string }> = [
   { value: 'claimed', label: '进行中' },
   { value: 'submitted', label: '已提交' },
   { value: 'ai_reviewing', label: 'AI审中' },
-  { value: 'pending_vote', label: '待投票' },
+  { value: 'pending_review', label: '待评审' },
   { value: 'settled', label: '已固化' },
 ];
 
@@ -411,7 +431,9 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       </div>
 
       <!-- ── 任务 Tab ──────────────────────────────────────────────────────── -->
-      <div v-if="activeTab === 'tasks'" class="flex gap-4 items-start">
+      <div v-if="activeTab === 'tasks'">
+        <p v-if="meetingError" class="text-xs text-red-400 mb-2">{{ meetingError }}</p>
+        <div class="flex gap-4 items-start">
         <!-- Task table section -->
         <div class="flex-1 min-w-0 glass-card">
           <!-- Table header -->
@@ -431,10 +453,23 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                 {{ opt.label }}
               </button>
             </div>
-            <BaseButton size="sm" class="transition-colors duration-200" @click="showCreateTask = !showCreateTask">
-              <Plus class="w-3.5 h-3.5 mr-1" />
-              新任务
-            </BaseButton>
+            <div class="flex items-center gap-2">
+              <BaseButton
+                v-if="permissionStore.can('create', 'votes')"
+                size="sm"
+                variant="ghost"
+                :loading="meetingCreating"
+                class="transition-colors duration-200 text-primary hover:bg-primary/10"
+                @click="openReviewMeeting"
+              >
+                <Video class="w-3.5 h-3.5 mr-1" />
+                开启评审
+              </BaseButton>
+              <BaseButton size="sm" class="transition-colors duration-200" @click="showCreateTask = !showCreateTask">
+                <Plus class="w-3.5 h-3.5 mr-1" />
+                新任务
+              </BaseButton>
+            </div>
           </div>
 
           <!-- Quick create task row -->
@@ -618,6 +653,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 

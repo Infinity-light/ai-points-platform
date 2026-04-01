@@ -42,8 +42,13 @@ ai-points-platform/
 │   │   ├── brain/           # 智脑对话、SSE 流式输出
 │   │   ├── notification/    # 站内通知
 │   │   ├── invite/          # 邀请码管理
-│   │   ├── admin/           # HR 管理后台 API
+│   │   ├── admin/           # 统一管理后台 API（含用户管理、租户设置）
 │   │   ├── super-admin/     # 超管 API（租户、全局配置）
+│   │   ├── rbac/            # 动态角色权限（CASL + DB 驱动，替代旧 RolesGuard）
+│   │   ├── audit/           # 审计日志（全局拦截器 + 查询 API）
+│   │   ├── meeting/         # 实时评审会议（Socket.IO + 投票 + 结算触发）
+│   │   ├── auction/         # 通用竞拍引擎（Bull 延迟任务 + 事件驱动）
+│   │   ├── bulletin/        # 公示区（工分排行/账目/决策/审计，支持公开模式）
 │   │   ├── upload/          # 文件上传
 │   │   └── webhook/         # Git Webhook 接收
 │   ├── Dockerfile           # 多阶段构建，China mirrors，bcrypt 原生编译
@@ -85,7 +90,7 @@ tier >= maxSteps 时清零
 
 **Migration 014**：修复旧项目默认 `maxSteps=9`（错误）→ `4`（正确）。
 
-### AI 评审
+### AI 评审 + 评审会议
 
 三维度评分：调查(0-5) / 规划(0-5) / 执行(0-5)，总分15。每次提交触发3次 LLM 调用：
 - 成功调用结果取均值
@@ -93,7 +98,31 @@ tier >= maxSteps 时清零
 - 全部失败：抛出异常，任务重新入队
 - Prompt 不传提交人姓名以去主观化
 
-**结算积分公式**：`finalPoints = max(1, round(estimatedPoints × aiTotal/15))`，AI 质量得分决定最终发放量。
+**评审会议（v2）**：AI 评分后进入 `PENDING_REVIEW` 状态，由项目负责人开启实时评审会议（Socket.IO），团队逐条审核：
+- 认可 AI 评分 = 投出 AI 原始总分
+- 不认可 = 投出自定义总分（无上限，支持 Bonus）
+- 最终分数 = 所有参会者投分的中位数
+- 多人任务：按百分比分配（不要求合计 100%）
+- 会议结束自动触发结算
+
+**结算积分公式**：`finalPoints = max(1, round(estimatedPoints × finalScore/15))`，finalScore 来自评审会议中位数。
+
+### 动态角色权限（RBAC）
+
+替代旧的硬编码 `Role` 枚举，使用 CASL + 数据库驱动：
+- `roles` 表：租户级（super_admin/hr_admin/project_lead/employee）+ 项目级（lead/member）+ 自定义角色
+- `role_permissions` 表：资源×动作（如 users:read, tasks:create, points:approve）
+- `PoliciesGuard` + `@CheckPolicies(resource, action)` 替代旧 `RolesGuard` + `@Roles()`
+- JWT 只存 userId，权限每次请求从 DB 加载
+- 超级管理员可在管理后台创建自定义角色并配置权限矩阵
+
+### 通用竞拍引擎
+
+独立模块，活跃工分竞拍：
+- 支持任务认领竞拍、奖励竞拍、自定义竞拍
+- Bull 延迟任务自动开奖
+- EventEmitter 事件驱动结果回写（如自动分配任务给赢家）
+- 单人任务第二人认领时自动触发竞拍
 
 ### CI/CD — server-build 策略
 
@@ -140,8 +169,39 @@ tier >= maxSteps 时清零
 
 ### super-admin 模块
 
-- 所有接口要求 `role: super_admin`（JWT Guard + RolesGuard）
+- 所有接口要求 `CheckPolicies('tenants', 'read')`
 - 租户 CRUD、全局配置、LLM API Key 配置
+
+### rbac 模块
+
+- 角色 CRUD：`GET/POST/PATCH/DELETE /rbac/roles`
+- 权限管理：`GET/PUT /rbac/roles/:id/permissions`
+- 角色分配：`PATCH /rbac/users/:id/tenant-role`、`PATCH /rbac/users/:id/project-role`
+- 当前用户权限：`GET /rbac/my-permissions`
+
+### audit 模块
+
+- 全局 `AuditInterceptor` 拦截所有写操作（POST/PATCH/DELETE），异步记录到 `audit_logs` 表
+- 查询：`GET /audit/logs`（分页+筛选）、`GET /audit/logs/:resource/:resourceId`（单资源历史）
+
+### meeting 模块
+
+- 创建：`POST /meetings`（需 votes:create 权限）
+- Socket.IO Gateway：namespace `/meeting`，JWT 认证
+- 事件：join/focus/vote/contribution/confirm/end
+- 会议结束自动触发 `SettlementService.settleFromMeeting()`
+
+### auction 模块
+
+- CRUD：`POST/GET /auctions`、`POST /auctions/:id/bid`
+- Bull 延迟任务 `auction-close` 自动开奖
+- `TaskAuctionListener` 监听 `auction.closed` 事件，自动分配任务
+
+### bulletin 模块
+
+- 内部路由：`GET /bulletin/leaderboard|settlements|dividends|decisions|audit-trail`（需 JWT）
+- 公开路由：`GET /public/:tenantSlug/bulletin/*`（无需 JWT，姓名脱敏）
+- 排行榜数据来自 `points_snapshots` 结算快照
 
 ---
 
@@ -180,13 +240,18 @@ server {
     client_max_body_size 50m;
     location / {
         proxy_pass http://127.0.0.1:4100;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_read_timeout 300s;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600s;
         proxy_buffering off;
     }
 }
 ```
+> **WebSocket 支持**：`proxy_http_version 1.1` + `Upgrade` headers 支持 Socket.IO 评审会议实时通信。前端容器 nginx.conf 中有独立的 `/socket.io/` location block 转发到 backend:3000。
 
 ### Docker Compose 服务
 

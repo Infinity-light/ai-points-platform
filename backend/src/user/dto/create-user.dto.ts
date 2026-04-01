@@ -6,9 +6,7 @@ import {
   MaxLength,
   IsOptional,
   Matches,
-  IsEnum,
 } from 'class-validator';
-import { Role } from '../enums/role.enum';
 
 export class CreateUserDto {
   @IsString()
@@ -32,10 +30,6 @@ export class CreateUserDto {
   @IsString()
   @Matches(/^1[3-9]\d{9}$/, { message: '手机号格式不正确' })
   phone?: string;
-
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
 
   @IsOptional()
   @IsString()

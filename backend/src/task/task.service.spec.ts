@@ -16,6 +16,7 @@ const mockTask: Task = {
   createdBy: 'creator-uuid',
   metadata: {},
   estimatedPoints: null,
+  claimMode: 'single',
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -104,19 +105,19 @@ describe('TaskService', () => {
   });
 
   describe('updateAiScores', () => {
-    it('应该更新 AI 分数并转换状态为 PENDING_VOTE', async () => {
+    it('应该更新 AI 分数并转换状态为 PENDING_REVIEW', async () => {
       taskRepo.findOne.mockResolvedValue({ ...mockTask, status: TaskStatus.SUBMITTED });
       taskRepo.save.mockImplementation((t) => Promise.resolve(t));
       const scores = { research: 4, planning: 3, execution: 5, average: 4, rawScores: [] };
       const result = await service.updateAiScores('task-uuid', 'tenant-uuid', scores);
       expect(result.metadata.aiScores).toEqual(scores);
-      expect(result.status).toBe(TaskStatus.PENDING_VOTE);
+      expect(result.status).toBe(TaskStatus.PENDING_REVIEW);
     });
   });
 
   describe('settle', () => {
     it('应该固化工分并转换状态为 SETTLED', async () => {
-      taskRepo.findOne.mockResolvedValue({ ...mockTask, status: TaskStatus.PENDING_VOTE });
+      taskRepo.findOne.mockResolvedValue({ ...mockTask, status: TaskStatus.PENDING_REVIEW });
       taskRepo.save.mockImplementation((t) => Promise.resolve(t));
       const result = await service.settle('task-uuid', 'tenant-uuid', 50);
       expect(result.status).toBe(TaskStatus.SETTLED);

@@ -9,9 +9,8 @@ import {
 } from '@nestjs/common';
 import { SettlementService } from './settlement.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { IsUUID, IsNotEmpty } from 'class-validator';
 
@@ -26,17 +25,18 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('settlements')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class SettlementController {
   constructor(private readonly settlementService: SettlementService) {}
 
   @Post()
-  @Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('settlements', 'trigger')
   trigger(@Body() dto: TriggerSettlementDto, @Request() req: RequestWithUser) {
     return this.settlementService.triggerSettlement(dto.voteSessionId, req.user.tenantId, req.user.sub);
   }
 
   @Get('project/:projectId')
+  @CheckPolicies('settlements', 'read')
   findForProject(@Param('projectId') projectId: string, @Request() req: RequestWithUser) {
     return this.settlementService.findForProject(req.user.tenantId, projectId);
   }

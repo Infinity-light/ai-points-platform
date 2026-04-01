@@ -10,9 +10,8 @@ import {
 } from '@nestjs/common';
 import { VoteService } from './vote.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { IsBoolean, IsArray, IsUUID, ArrayMinSize, IsNotEmpty } from 'class-validator';
 
@@ -37,27 +36,30 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('vote-sessions')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class VoteController {
   constructor(private readonly voteService: VoteService) {}
 
   @Post()
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('votes', 'create')
   createSession(@Body() dto: CreateVoteSessionDto, @Request() req: RequestWithUser) {
     return this.voteService.createSession(req.user.tenantId, dto.projectId, req.user.sub, dto.taskIds);
   }
 
   @Get('project/:projectId')
+  @CheckPolicies('votes', 'read')
   getProjectSessions(@Param('projectId') projectId: string, @Request() req: RequestWithUser) {
     return this.voteService.getSessionsForProject(req.user.tenantId, projectId);
   }
 
   @Get(':id')
+  @CheckPolicies('votes', 'read')
   getSession(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.voteService.getSession(id, req.user.tenantId);
   }
 
   @Post(':id/votes')
+  @CheckPolicies('votes', 'create')
   castVote(
     @Param('id') id: string,
     @Body() dto: CastVoteDto,
@@ -67,12 +69,13 @@ export class VoteController {
   }
 
   @Patch(':id/close')
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('votes', 'close')
   closeSession(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.voteService.closeSession(id, req.user.tenantId);
   }
 
   @Get(':id/votes')
+  @CheckPolicies('votes', 'read')
   getVotes(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.voteService.getVotesForSession(id, req.user.tenantId);
   }

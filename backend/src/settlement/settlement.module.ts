@@ -10,16 +10,21 @@ import { ProjectModule } from '../project/project.module';
 import { UserModule } from '../user/user.module';
 import { User } from '../user/entities/user.entity';
 import { DividendModule } from '../dividend/dividend.module';
+import { RbacModule } from '../rbac/rbac.module';
+import { ReviewMeeting } from '../meeting/entities/review-meeting.entity';
+import { TaskContribution } from '../meeting/entities/task-contribution.entity';
+import { PointsSnapshot } from '../points/entities/points-snapshot.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Settlement, User]),
+    TypeOrmModule.forFeature([Settlement, User, ReviewMeeting, TaskContribution, PointsSnapshot]),
     VoteModule,
     TaskModule,
     PointsModule,
     ProjectModule,
     UserModule,
     forwardRef(() => DividendModule),
+    RbacModule,
   ],
   controllers: [SettlementController],
   providers: [SettlementService],

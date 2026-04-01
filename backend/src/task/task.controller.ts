@@ -60,4 +60,13 @@ export class TaskController {
   ) {
     return this.taskService.transition(id, req.user.tenantId, req.user.sub, dto.status);
   }
+
+  @Post(':id/claim')
+  claim(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.taskService.claimTask({
+      taskId: id,
+      tenantId: req.user.tenantId,
+      userId: req.user.sub,
+    });
+  }
 }

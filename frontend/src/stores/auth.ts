@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/lib/axios';
+import { usePermissionStore } from '@/stores/permission';
 
 export interface AuthUser {
   id: string;
@@ -37,6 +38,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = res.data;
       userLoaded.value = true;
       localStorage.setItem('user', JSON.stringify(res.data));
+      const permissionStore = usePermissionStore();
+      void permissionStore.fetchPermissions();
     } catch {
       // Token invalid — clear auth
       logout();
@@ -71,6 +74,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    const permissionStore = usePermissionStore();
+    permissionStore.reset();
   }
 
   return { user, accessToken, refreshToken, isAuthenticated, userLoaded, setAuth, logout, tryRefreshToken, fetchUser };

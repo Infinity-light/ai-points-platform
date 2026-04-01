@@ -7,6 +7,7 @@ import { VoteRecord } from './entities/vote-record.entity';
 import { PointsModule } from '../points/points.module';
 import { ProjectModule } from '../project/project.module';
 import { UserModule } from '../user/user.module';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UserModule } from '../user/user.module';
     PointsModule,
     ProjectModule,
     UserModule,
+    RbacModule,
   ],
   controllers: [VoteController],
   providers: [VoteService],
