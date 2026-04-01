@@ -73,9 +73,8 @@ export class SettlementService {
       try {
         const task = await this.taskService.findOne(taskId, tenantId);
 
-        // Derive final points from AI scores when available.
-        // Formula: estimatedPoints × (aiTotal / 15), min 1 point.
-        // Fallback: estimatedPoints when AI review was skipped or failed.
+        // Final points from AI scores (sum of 3 dimensions, 0-15).
+        // Used as fallback when no review meeting vote exists.
         const aiScores = task.metadata.aiScores;
         let finalPoints: number;
         if (
@@ -84,11 +83,9 @@ export class SettlementService {
           typeof aiScores.planning === 'number' &&
           typeof aiScores.execution === 'number'
         ) {
-          const aiTotal = aiScores.research + aiScores.planning + aiScores.execution; // 0–15
-          const qualityRatio = aiTotal / 15;
-          finalPoints = Math.max(1, Math.round((task.estimatedPoints ?? 10) * qualityRatio));
+          finalPoints = Math.max(1, Math.round(aiScores.research + aiScores.planning + aiScores.execution));
         } else {
-          finalPoints = task.estimatedPoints ?? 10;
+          finalPoints = 1;
         }
 
         // Settle the task
@@ -208,11 +205,8 @@ export class SettlementService {
 
       try {
         const task = await this.taskService.findOne(taskId, tenantId);
-        const estimatedPoints = task.estimatedPoints ?? task.metadata?.estimatedPoints ?? 10;
-
-        // finalPoints = max(1, round(estimatedPoints × finalScore / 15))
-        const qualityRatio = taskResult.finalScore / 15;
-        const finalPoints = Math.max(1, Math.round(Number(estimatedPoints) * qualityRatio));
+        // finalPoints = review meeting vote median (stored as finalScore)
+        const finalPoints = Math.max(1, Math.round(taskResult.finalScore));
 
         // 查 task_contributions：有则按比例分配，无则全给 assignee
         const contributions = await this.contributionRepository.find({
@@ -382,9 +376,8 @@ export class SettlementService {
     for (const { taskId, finalScore, meetingId } of pendingTaskIds) {
       try {
         const task = await this.taskService.findOne(taskId, tenantId);
-        const estimatedPoints = task.estimatedPoints ?? task.metadata?.estimatedPoints ?? 10;
-        const qualityRatio = finalScore / 15;
-        const finalPoints = Math.max(1, Math.round(Number(estimatedPoints) * qualityRatio));
+        // finalPoints = review meeting vote median (stored as finalScore)
+        const finalPoints = Math.max(1, Math.round(finalScore));
 
         // Check contributions for multi-person split
         const contributions = await this.contributionRepository.find({

@@ -291,7 +291,6 @@ ${existingTitles || '（暂无）'}
         await this.taskService.create(tenantId, projectId, createdBy, {
           title: s.title,
           description: s.description,
-          estimatedPoints: s.estimatedPoints,
         });
         created++;
       } catch {

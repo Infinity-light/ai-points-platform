@@ -20,8 +20,7 @@ export interface VoteStatsResult {
 }
 
 export interface CastVoteDto {
-  isApproval: boolean;
-  score?: number;
+  points: number;
 }
 
 export interface ContributionEntry {
@@ -96,11 +95,9 @@ export class MeetingService {
       throw new BadRequestException('会议已关闭，无法投票');
     }
 
-    if (!dto.isApproval && (!dto.score || dto.score <= 0)) {
-      throw new BadRequestException('自定义分数必须大于 0');
+    if (dto.points < 0 || !Number.isInteger(dto.points)) {
+      throw new BadRequestException('工分必须为非负整数');
     }
-
-    const score = dto.isApproval ? null : (dto.score ?? null);
 
     // 查找已有投票（UNIQUE 约束确保一票，这里用 upsert 逻辑）
     const existing = await this.voteRepository.findOne({
@@ -108,8 +105,8 @@ export class MeetingService {
     });
 
     if (existing) {
-      existing.isApproval = dto.isApproval;
-      existing.score = score !== null ? Number(score) : null;
+      existing.score = dto.points;
+      existing.isApproval = false;
       await this.voteRepository.save(existing);
     } else {
       const vote = this.voteRepository.create({
@@ -117,8 +114,8 @@ export class MeetingService {
         taskId,
         userId,
         tenantId,
-        isApproval: dto.isApproval,
-        score: score !== null ? Number(score) : null,
+        score: dto.points,
+        isApproval: false,
       });
       await this.voteRepository.save(vote);
     }
@@ -155,9 +152,8 @@ export class MeetingService {
     meetingId: string;
     taskId: string;
     tenantId: string;
-    aiTotalScore: number;
   }): Promise<MeetingTaskResult> {
-    const { meetingId, taskId, tenantId, aiTotalScore } = opts;
+    const { meetingId, taskId, tenantId } = opts;
 
     const meeting = await this.getMeetingOrFail(meetingId, tenantId);
 
@@ -165,19 +161,12 @@ export class MeetingService {
       where: { meetingId, taskId },
     });
 
-    const approvalCount = votes.filter((v) => v.isApproval).length;
-    const challengeCount = votes.filter((v) => !v.isApproval).length;
     const voteCount = votes.length;
+    const approvalCount = 0; // legacy field, kept for backward compat
+    const challengeCount = voteCount;
 
-    // 计算分数列表：认可票取 AI 总分，自定义票取其 score
-    const scores = votes.map((v) => {
-      if (v.isApproval) return aiTotalScore;
-      return Number(v.score ?? aiTotalScore);
-    });
-
-    const medianScore = voteCount > 0 ? calculateMedian(scores) : aiTotalScore;
-
-    // 最终分 = 中位数（如无投票则取 AI 原分）
+    const scores = votes.map((v) => Number(v.score));
+    const medianScore = voteCount > 0 ? calculateMedian(scores) : 0;
     const finalScore = medianScore;
 
     const result: MeetingTaskResult = {
@@ -262,16 +251,12 @@ export class MeetingService {
     taskId: string,
   ): Promise<VoteStatsResult> {
     const votes = await this.voteRepository.find({ where: { meetingId, taskId } });
-    const approvalCount = votes.filter((v) => v.isApproval).length;
-    const challengeCount = votes.filter((v) => !v.isApproval).length;
     const voteCount = votes.length;
+    const approvalCount = 0;
+    const challengeCount = voteCount;
 
-    const customScores = votes
-      .filter((v) => !v.isApproval && v.score !== null)
-      .map((v) => Number(v.score));
-
-    const medianScore =
-      customScores.length > 0 ? calculateMedian(customScores) : null;
+    const scores = votes.map((v) => Number(v.score));
+    const medianScore = scores.length > 0 ? calculateMedian(scores) : null;
 
     return { taskId, approvalCount, challengeCount, voteCount, medianScore };
   }

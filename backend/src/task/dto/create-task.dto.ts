@@ -4,9 +4,6 @@ import {
   IsOptional,
   MaxLength,
   IsObject,
-  IsInt,
-  Min,
-  Max,
 } from 'class-validator';
 
 export class CreateTaskDto {
@@ -18,12 +15,6 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  estimatedPoints?: number;
 
   @IsOptional()
   @IsObject()

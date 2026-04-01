@@ -33,12 +33,9 @@ export class ReviewVote {
   @Column('uuid')
   tenantId!: string;
 
-  /**
-   * null 表示认可 AI 分（isApproval=true 时为 null）
-   * 有值表示自定义覆盖分数
-   */
-  @Column({ type: 'decimal', precision: 6, scale: 2, nullable: true })
-  score!: number | null;
+  /** 投出的工分数（正整数，无上限） */
+  @Column({ type: 'integer', nullable: false, default: 0 })
+  score!: number;
 
   @Column({ type: 'boolean', default: false })
   isApproval!: boolean;

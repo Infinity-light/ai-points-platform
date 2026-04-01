@@ -51,7 +51,6 @@ const tasks = ref<Task[]>([]);
 const taskFilter = ref<TaskStatus | 'all'>('all');
 const showCreateTask = ref(false);
 const newTaskTitle = ref('');
-const newTaskPoints = ref<number | null>(null);
 const createLoading = ref(false);
 const selectedTask = ref<Task | null>(null);
 const showSubmitModal = ref(false);
@@ -128,11 +127,9 @@ async function createTask() {
   try {
     const res = await taskApi.create(projectId.value, {
       title: newTaskTitle.value.trim(),
-      estimatedPoints: newTaskPoints.value ?? undefined,
     });
     tasks.value.unshift(res.data);
     newTaskTitle.value = '';
-    newTaskPoints.value = null;
     showCreateTask.value = false;
   } catch {
     // ignore
@@ -481,14 +478,6 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
                 class="flex-1 px-3 py-1.5 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 @keyup.enter="createTask"
               />
-              <input
-                v-model.number="newTaskPoints"
-                type="number"
-                min="1"
-                max="100"
-                placeholder="预估工分"
-                class="w-24 px-3 py-1.5 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              />
               <BaseButton size="sm" :loading="createLoading" @click="createTask">添加</BaseButton>
               <BaseButton
                 size="sm"
@@ -535,9 +524,6 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               <div class="text-xs text-muted-foreground w-16 text-right">
                 <span v-if="task.metadata?.finalPoints" class="text-green-400 font-mono font-medium">
                   {{ task.metadata.finalPoints }}分
-                </span>
-                <span v-else-if="task.estimatedPoints" class="font-mono text-muted-foreground">
-                  ~{{ task.estimatedPoints }}分
                 </span>
               </div>
               <div class="w-28 flex justify-end gap-1.5">
