@@ -50,7 +50,7 @@ export class UserService {
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
       .where('user.tenantId = :tenantId', { tenantId })
-      .andWhere('user.email = :email', { email })
+      .andWhere('LOWER(user.email) = LOWER(:email)', { email })
       .getOne();
   }
 
