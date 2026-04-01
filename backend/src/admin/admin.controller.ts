@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Body,
   Param,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { ToggleInviteDto } from './dto/toggle-invite.dto';
+import { CreateInviteDto } from '../invite/dto/create-invite.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
@@ -68,6 +70,16 @@ export class AdminController {
   @Get('stats')
   getTenantStats(@CurrentTenant() tenantId: string) {
     return this.adminService.getTenantStats(tenantId);
+  }
+
+  @Post('invites')
+  @CheckPolicies('users', 'create')
+  createInviteCode(
+    @CurrentTenant() tenantId: string,
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateInviteDto,
+  ) {
+    return this.adminService.createInviteCode(tenantId, req.user.sub, dto);
   }
 
   @Get('invites')

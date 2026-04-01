@@ -7,6 +7,15 @@ import { Invite } from '../invite/entities/invite.entity';
 import { UserRole } from '../rbac/entities/user-role.entity';
 import { ProjectMember } from '../project/entities/project-member.entity';
 import { Project } from '../project/entities/project.entity';
+import { CreateInviteDto } from '../invite/dto/create-invite.dto';
+
+function generateInviteCode(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(
+    { length },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join('');
+}
 
 export interface TenantStats {
   totalUsers: number;
@@ -97,6 +106,33 @@ export class AdminService {
       totalPointsAwarded,
       activeInviteCodes,
     };
+  }
+
+  async createInviteCode(
+    tenantId: string,
+    createdBy: string,
+    dto: CreateInviteDto,
+  ): Promise<Invite> {
+    let code: string;
+    let attempts = 0;
+    do {
+      code = generateInviteCode(8);
+      const existing = await this.inviteRepo.findOne({ where: { tenantId, code } });
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 10);
+
+    const invite = this.inviteRepo.create({
+      tenantId,
+      code: code!,
+      maxUses: dto.maxUses ?? 10,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      note: dto.note ?? null,
+      createdBy,
+      isActive: true,
+    });
+
+    return this.inviteRepo.save(invite);
   }
 
   async listInviteCodes(tenantId: string): Promise<Invite[]> {

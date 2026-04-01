@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { adminApi, type InviteCode } from '@/services/admin';
+import { adminApi, type InviteCode, type CreateInvitePayload } from '@/services/admin';
+import { Plus, ChevronDown, ChevronUp } from 'lucide-vue-next';
 
 const invites = ref<InviteCode[]>([]);
 const loading = ref(false);
 const error = ref('');
 const toggleLoading = ref<Record<string, boolean>>({});
+
+const showCreateForm = ref(false);
+const createLoading = ref(false);
+const createError = ref('');
+const createSuccess = ref('');
+
+const form = ref<CreateInvitePayload>({
+  maxUses: 10,
+  expiresAt: '',
+  note: '',
+});
 
 async function loadInvites() {
   loading.value = true;
@@ -16,6 +28,32 @@ async function loadInvites() {
     error.value = '加载邀请码失败，请刷新重试';
   } finally {
     loading.value = false;
+  }
+}
+
+async function submitCreate() {
+  createLoading.value = true;
+  createError.value = '';
+  createSuccess.value = '';
+  try {
+    const payload: CreateInvitePayload = {
+      maxUses: form.value.maxUses,
+    };
+    if (form.value.expiresAt) {
+      payload.expiresAt = new Date(form.value.expiresAt).toISOString();
+    }
+    if (form.value.note?.trim()) {
+      payload.note = form.value.note.trim();
+    }
+    const created = await adminApi.createInvite(payload);
+    createSuccess.value = `邀请码已创建：${created.code}`;
+    form.value = { maxUses: 10, expiresAt: '', note: '' };
+    showCreateForm.value = false;
+    await loadInvites();
+  } catch {
+    createError.value = '创建失败，请重试';
+  } finally {
+    createLoading.value = false;
   }
 }
 
@@ -51,6 +89,92 @@ onMounted(() => {
 
 <template>
   <div>
+    <!-- 操作区 -->
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-muted-foreground">管理租户邀请码</p>
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150"
+        @click="showCreateForm = !showCreateForm"
+      >
+        <Plus class="w-4 h-4" />
+        创建邀请码
+        <ChevronUp v-if="showCreateForm" class="w-3.5 h-3.5" />
+        <ChevronDown v-else class="w-3.5 h-3.5" />
+      </button>
+    </div>
+
+    <!-- 创建表单 -->
+    <div
+      v-if="showCreateForm"
+      class="glass-card p-5 mb-5 border border-primary/20"
+    >
+      <h3 class="text-sm font-semibold text-foreground mb-4">创建新邀请码</h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <!-- 最大使用次数 -->
+        <div>
+          <label class="block text-xs text-muted-foreground mb-1.5">最大使用次数</label>
+          <input
+            v-model.number="form.maxUses"
+            type="number"
+            min="1"
+            max="1000"
+            class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+            placeholder="默认 10"
+          />
+        </div>
+
+        <!-- 过期时间 -->
+        <div>
+          <label class="block text-xs text-muted-foreground mb-1.5">过期时间（可选）</label>
+          <input
+            v-model="form.expiresAt"
+            type="date"
+            class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+          />
+        </div>
+
+        <!-- 备注 -->
+        <div class="sm:col-span-2">
+          <label class="block text-xs text-muted-foreground mb-1.5">备注（可选）</label>
+          <input
+            v-model="form.note"
+            type="text"
+            maxlength="255"
+            class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+            placeholder="例：新员工入职邀请"
+          />
+        </div>
+      </div>
+
+      <p v-if="createError" class="text-xs text-destructive mb-3">{{ createError }}</p>
+
+      <div class="flex gap-2 justify-end">
+        <button
+          class="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-white/5 transition-colors duration-150"
+          @click="showCreateForm = false"
+        >
+          取消
+        </button>
+        <button
+          class="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="createLoading"
+          @click="submitCreate"
+        >
+          {{ createLoading ? '创建中...' : '确认创建' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div
+      v-if="createSuccess"
+      class="bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3 rounded-lg mb-4"
+    >
+      {{ createSuccess }}
+    </div>
+
+    <!-- 错误提示 -->
     <div
       v-if="error"
       class="bg-destructive/10 border border-destructive/30 text-destructive text-sm px-4 py-3 rounded-lg mb-4"

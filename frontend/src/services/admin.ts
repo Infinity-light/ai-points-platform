@@ -34,6 +34,12 @@ export interface TenantStats {
   activeInviteCodes: number;
 }
 
+export interface CreateInvitePayload {
+  maxUses?: number;
+  expiresAt?: string;
+  note?: string;
+}
+
 export const adminApi = {
   listUsers: () => api.get<AdminUser[]>('/admin/users').then((r) => r.data),
   updateUserRole: (userId: string, roleId: string) =>
@@ -41,6 +47,8 @@ export const adminApi = {
   getUserProjects: (userId: string) =>
     api.get<UserProjectInfo[]>(`/admin/users/${userId}/projects`).then((r) => r.data),
   getStats: () => api.get<TenantStats>('/admin/stats').then((r) => r.data),
+  createInvite: (payload: CreateInvitePayload) =>
+    api.post<InviteCode>('/admin/invites', payload).then((r) => r.data),
   listInvites: () => api.get<InviteCode[]>('/admin/invites').then((r) => r.data),
   toggleInvite: (id: string, isActive: boolean) =>
     api.patch<InviteCode>(`/admin/invites/${id}/toggle`, { isActive }).then((r) => r.data),

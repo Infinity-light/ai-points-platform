@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { auctionApi, type Auction, type Bid, type AuctionStatus } from '@/services/auction';
+import { auctionApi, type Auction, type Bid, type AuctionStatus, type AuctionType } from '@/services/auction';
 import { Gavel, Clock, Trophy, ChevronRight, X, Plus } from 'lucide-vue-next';
 
 // ─── 状态 ────────────────────────────────────────────────────────────────────
@@ -13,6 +13,17 @@ const bidAmount = ref<number>(0);
 const bidLoading = ref(false);
 const bidError = ref('');
 const filterStatus = ref<AuctionStatus | ''>('');
+
+// 发起竞拍模态框
+const showCreateModal = ref(false);
+const createLoading = ref(false);
+const createError = ref('');
+const createForm = ref({
+  description: '',
+  type: 'custom' as AuctionType,
+  endsAt: '',
+  minBid: 0,
+});
 
 // ─── 计算属性 ─────────────────────────────────────────────────────────────────
 const filteredAuctions = computed(() => {
@@ -118,6 +129,45 @@ function typeLabel(type: string): string {
   return map[type] ?? type;
 }
 
+function openCreateModal() {
+  createForm.value = { description: '', type: 'custom', endsAt: '', minBid: 0 };
+  createError.value = '';
+  showCreateModal.value = true;
+}
+
+function closeCreateModal() {
+  showCreateModal.value = false;
+  createError.value = '';
+}
+
+async function submitCreate() {
+  if (!createForm.value.description.trim()) {
+    createError.value = '请填写标的物描述';
+    return;
+  }
+  if (!createForm.value.endsAt) {
+    createError.value = '请选择截止时间';
+    return;
+  }
+  createLoading.value = true;
+  createError.value = '';
+  try {
+    await auctionApi.create({
+      description: createForm.value.description.trim(),
+      type: createForm.value.type,
+      endsAt: new Date(createForm.value.endsAt).toISOString(),
+      minBid: createForm.value.minBid,
+    });
+    closeCreateModal();
+    await loadAuctions();
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } } };
+    createError.value = err.response?.data?.message ?? '创建失败，请重试';
+  } finally {
+    createLoading.value = false;
+  }
+}
+
 onMounted(loadAuctions);
 </script>
 
@@ -132,8 +182,8 @@ onMounted(loadAuctions);
         </h1>
         <p class="text-sm text-muted-foreground mt-0.5">工分竞拍活动</p>
       </div>
-      <!-- 状态筛选 -->
-      <div class="flex gap-2">
+      <!-- 状态筛选 + 发起竞拍 -->
+      <div class="flex items-center gap-2">
         <button
           v-for="s in (['', 'open', 'closed', 'cancelled'] as const)"
           :key="s"
@@ -144,6 +194,13 @@ onMounted(loadAuctions);
           @click="filterStatus = s"
         >
           {{ s === '' ? '全部' : statusLabel(s) }}
+        </button>
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 ml-1"
+          @click="openCreateModal"
+        >
+          <Plus class="w-3.5 h-3.5" />
+          发起竞拍
         </button>
       </div>
     </div>
@@ -198,6 +255,96 @@ onMounted(loadAuctions);
         </div>
       </button>
     </div>
+
+    <!-- 发起竞拍模态框 -->
+    <Teleport to="body">
+      <div
+        v-if="showCreateModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        @click.self="closeCreateModal"
+      >
+        <div class="glass-card w-full max-w-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+              <Gavel class="w-5 h-5 text-primary" />
+              发起竞拍
+            </h2>
+            <button
+              class="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+              @click="closeCreateModal"
+            >
+              <X class="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <!-- 标的物描述 -->
+            <div>
+              <label class="block text-xs text-muted-foreground mb-1.5">标的物描述</label>
+              <textarea
+                v-model="createForm.description"
+                rows="3"
+                class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+                placeholder="描述此次竞拍的标的物..."
+              />
+            </div>
+
+            <!-- 竞拍类型 -->
+            <div>
+              <label class="block text-xs text-muted-foreground mb-1.5">竞拍类型</label>
+              <select
+                v-model="createForm.type"
+                class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+              >
+                <option value="task_claim">任务认领</option>
+                <option value="reward">奖励</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+
+            <!-- 截止时间 -->
+            <div>
+              <label class="block text-xs text-muted-foreground mb-1.5">截止时间</label>
+              <input
+                v-model="createForm.endsAt"
+                type="datetime-local"
+                class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+
+            <!-- 最低出价 -->
+            <div>
+              <label class="block text-xs text-muted-foreground mb-1.5">最低出价</label>
+              <input
+                v-model.number="createForm.minBid"
+                type="number"
+                min="0"
+                class="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <p v-if="createError" class="text-xs text-destructive mt-3">{{ createError }}</p>
+
+          <div class="flex gap-2 justify-end mt-5">
+            <button
+              class="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-white/5 transition-colors duration-150"
+              @click="closeCreateModal"
+            >
+              取消
+            </button>
+            <button
+              class="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="createLoading"
+              @click="submitCreate"
+            >
+              {{ createLoading ? '发起中...' : '发起竞拍' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- 详情抽屉 -->
     <Teleport to="body">
