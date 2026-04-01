@@ -4,10 +4,11 @@ import { AuditLog } from './entities/audit-log.entity';
 import { AuditService } from './audit.service';
 import { AuditInterceptor } from './audit.interceptor';
 import { AuditController } from './audit.controller';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([AuditLog])],
+  imports: [TypeOrmModule.forFeature([AuditLog]), RbacModule],
   controllers: [AuditController],
   providers: [AuditService, AuditInterceptor],
   exports: [AuditService, AuditInterceptor],
