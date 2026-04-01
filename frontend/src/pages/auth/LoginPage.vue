@@ -80,10 +80,10 @@ async function handleSubmit() {
       <div class="absolute inset-0 bg-gradient-to-r from-transparent to-background/80"></div>
       <div class="relative z-10 text-center px-12">
         <h2 class="font-heading text-4xl xl:text-5xl font-bold text-white drop-shadow-lg leading-tight">
-          赛托邦
+          赛托邦Cytopia
         </h2>
-        <p class="text-lg text-white/70 mt-3 font-heading tracking-widest uppercase">
-          Cytopia
+        <p class="text-lg text-white/70 mt-3 font-heading">
+          AI工分协作平台
         </p>
       </div>
     </div>
@@ -93,14 +93,14 @@ async function handleSubmit() {
       <div class="w-full max-w-sm">
         <!-- Mobile brand (lg hidden) -->
         <div class="text-center mb-8 lg:hidden">
-          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦 <span class="text-muted-foreground">Cytopia</span></h1>
-          <p class="text-sm text-muted-foreground mt-1">登录您的账号</p>
+          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦Cytopia</h1>
+          <p class="text-sm text-muted-foreground mt-1">AI工分协作平台</p>
         </div>
 
         <!-- Desktop subtitle -->
         <div class="hidden lg:block mb-8">
           <h1 class="font-heading text-2xl font-bold text-foreground">欢迎回来</h1>
-          <p class="text-sm text-muted-foreground mt-1">登录您的赛托邦账号</p>
+          <p class="text-sm text-muted-foreground mt-1">登录您的账号</p>
         </div>
 
         <!-- Form Card -->

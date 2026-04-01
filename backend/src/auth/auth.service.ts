@@ -28,6 +28,7 @@ export interface AuthResponse extends TokenPair {
     email: string;
     name: string;
     tenantId: string;
+    tenantName: string;
     isEmailVerified: boolean;
   };
 }
@@ -222,6 +223,8 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
     await this.userService.updateRefreshToken(user.id, tokens.refreshToken);
 
+    const tenant = await this.tenantService.findOne(user.tenantId);
+
     return {
       ...tokens,
       user: {
@@ -229,6 +232,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         tenantId: user.tenantId,
+        tenantName: tenant.name,
         isEmailVerified: user.isEmailVerified,
       },
     };

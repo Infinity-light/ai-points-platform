@@ -197,10 +197,10 @@ function switchMode(newMode: 'join' | 'create') {
       <div class="absolute inset-0 bg-gradient-to-r from-transparent to-background/80"></div>
       <div class="relative z-10 text-center px-12">
         <h2 class="font-heading text-4xl xl:text-5xl font-bold text-white drop-shadow-lg leading-tight">
-          赛托邦
+          赛托邦Cytopia
         </h2>
-        <p class="text-lg text-white/70 mt-3 font-heading tracking-widest uppercase">
-          Cytopia
+        <p class="text-lg text-white/70 mt-3 font-heading">
+          AI工分协作平台
         </p>
       </div>
     </div>
@@ -210,7 +210,7 @@ function switchMode(newMode: 'join' | 'create') {
       <div class="w-full max-w-sm">
         <!-- Mobile brand -->
         <div class="text-center mb-6 lg:hidden">
-          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦 <span class="text-muted-foreground">Cytopia</span></h1>
+          <h1 class="font-heading text-2xl font-bold text-foreground">赛托邦Cytopia</h1>
         </div>
 
         <!-- Desktop subtitle -->
@@ -219,7 +219,7 @@ function switchMode(newMode: 'join' | 'create') {
             {{ step === 1 ? '创建账号' : '验证邮箱' }}
           </h1>
           <p class="text-sm text-muted-foreground mt-1">
-            {{ step === 1 ? '加入赛托邦，开启协作之旅' : '请查收验证邮件' }}
+            {{ step === 1 ? '加入我们，开启协作之旅' : '请查收验证邮件' }}
           </p>
         </div>
 

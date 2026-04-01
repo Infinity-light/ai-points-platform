@@ -177,7 +177,7 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
             <label class="text-sm font-medium text-foreground">结算日：每月 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 日</label>
             <div class="grid grid-cols-7 gap-1.5">
               <button
-                v-for="d in 28"
+                v-for="d in 31"
                 :key="d"
                 type="button"
                 class="w-full aspect-square rounded-md text-xs font-mono transition-colors duration-150 cursor-pointer"
@@ -189,6 +189,9 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
                 {{ d }}
               </button>
             </div>
+            <p v-if="form.dayOfMonth > 28" class="text-xs text-muted-foreground">
+              若当月天数不足，则在当月最后一天结算
+            </p>
           </div>
         </template>
       </div>

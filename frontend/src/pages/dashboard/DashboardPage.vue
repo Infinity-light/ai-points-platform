@@ -120,7 +120,7 @@ async function fetchProjects() {
 function buildMockActivities() {
   const userName = authStore.user?.name ?? '用户';
   activities.value = [
-    { id: '1', text: `欢迎使用赛托邦协作平台，${userName}！`, time: '刚刚', type: 'project' },
+    { id: '1', text: `欢迎使用AI工分协作平台，${userName}！`, time: '刚刚', type: 'project' },
     { id: '2', text: '完成任务后将在此处显示最新动态', time: '—', type: 'task' },
   ];
 }

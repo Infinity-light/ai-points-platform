@@ -22,7 +22,7 @@ export interface SettlementConfig {
   schedule?: {
     periodType: 'weekly' | 'monthly';
     dayOfWeek?: number;   // 0-6, 仅 weekly
-    dayOfMonth?: number;  // 1-28, 仅 monthly
+    dayOfMonth?: number;  // 1-31, 仅 monthly（若当月不足则取最后一天）
   };
   // Legacy fields — kept for backward compatibility during migration
   periodType?: 'weekly' | 'monthly';

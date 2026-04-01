@@ -11,8 +11,8 @@
             <Rocket class="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 class="font-heading text-base font-semibold text-foreground tracking-tight">赛托邦</h1>
-            <p class="text-[11px] text-muted-foreground tracking-wider uppercase">Cytopia</p>
+            <h1 class="font-heading text-base font-semibold text-foreground tracking-tight">{{ authStore.user?.tenantName ?? 'AI 工分平台' }}</h1>
+            <p class="text-[11px] text-muted-foreground">AI 工分协作平台</p>
           </div>
         </div>
       </div>

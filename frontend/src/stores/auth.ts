@@ -9,6 +9,7 @@ export interface AuthUser {
   name: string;
   role: string;
   tenantId: string;
+  tenantName?: string;
   isEmailVerified: boolean;
 }
 
