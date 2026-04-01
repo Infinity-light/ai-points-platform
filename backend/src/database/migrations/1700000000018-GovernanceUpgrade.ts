@@ -325,7 +325,7 @@ export class GovernanceUpgrade1700000000018 implements MigrationInterface {
       // 方案：先转为 varchar → 更新数据 → 重建 enum（含新值）→ 转回 enum
       await queryRunner.query(`ALTER TABLE "tasks" ALTER COLUMN "status" TYPE character varying(30)`);
       await queryRunner.query(`UPDATE "tasks" SET "status" = 'pending_review' WHERE "status" = 'pending_vote'`);
-      await queryRunner.query(`DROP TYPE IF EXISTS "tasks_status_enum"`);
+      await queryRunner.query(`DROP TYPE IF EXISTS "tasks_status_enum" CASCADE`);
       await queryRunner.query(`CREATE TYPE "tasks_status_enum" AS ENUM ('open', 'claimed', 'submitted', 'ai_reviewing', 'pending_review', 'pending_vote', 'settled', 'cancelled')`);
       await queryRunner.query(`ALTER TABLE "tasks" ALTER COLUMN "status" TYPE "tasks_status_enum" USING "status"::"tasks_status_enum"`);
 
