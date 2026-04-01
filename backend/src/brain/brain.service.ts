@@ -75,7 +75,7 @@ export class BrainService {
     const tasks = await this.taskService.findAll(tenantId, projectId);
 
     const taskSummary = tasks.slice(0, 50).map((t) =>
-      `- [${t.status}] ${t.title}${t.assigneeId ? ' (已认领)' : ' (待认领)'}${t.estimatedPoints ? ` ~${t.estimatedPoints}分` : ''}`
+      `- [${t.status}] ${t.title}${t.assigneeId ? ' (已认领)' : ' (待认领)'}${t.metadata?.finalPoints ? ` ${t.metadata.finalPoints}分` : ''}`
     ).join('\n');
 
     // Fetch points distribution
@@ -245,7 +245,7 @@ ${skillSummary}
     projectId: string,
     userId: string,
     instruction: string,
-  ): Promise<Array<{ title: string; description: string; estimatedPoints: number }>> {
+  ): Promise<Array<{ title: string; description: string }>> {
     const project = await this.projectService.findOne(projectId, tenantId);
     const tasks = await this.taskService.findAll(tenantId, projectId);
 
@@ -259,8 +259,8 @@ ${skillSummary}
 ${existingTitles || '（暂无）'}
 
 返回严格的 JSON 数组格式：
-[{"title":"任务标题","description":"任务描述","estimatedPoints":N}]
-只返回 JSON，不要其他文字。N 是 1-50 的整数。`,
+[{"title":"任务标题","description":"任务描述"}]
+只返回 JSON，不要其他文字。`,
       messages: [{ role: 'user', content: instruction }],
     });
 
@@ -271,7 +271,6 @@ ${existingTitles || '（暂无）'}
       const parsed = JSON.parse(content.text.trim()) as Array<{
         title: string;
         description: string;
-        estimatedPoints: number;
       }>;
       return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
     } catch {
@@ -283,7 +282,7 @@ ${existingTitles || '（暂无）'}
     tenantId: string,
     projectId: string,
     createdBy: string,
-    suggestions: Array<{ title: string; description?: string; estimatedPoints?: number }>,
+    suggestions: Array<{ title: string; description?: string }>,
   ): Promise<number> {
     let created = 0;
     for (const s of suggestions) {
