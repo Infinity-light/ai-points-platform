@@ -60,6 +60,7 @@
 import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { usePermissionStore } from '@/stores/permission';
 import SpaceBackground from '@/components/SpaceBackground.vue';
 import {
   LayoutDashboard,
@@ -70,27 +71,36 @@ import {
   Settings,
   LogOut,
   Rocket,
+  BarChart3,
+  Gavel,
 } from 'lucide-vue-next';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const permissionStore = usePermissionStore();
 
-const isAdminRole = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'hr_admin' || role === 'super_admin';
-});
+const isAdminVisible = computed(
+  () =>
+    permissionStore.can('read', 'users') ||
+    permissionStore.can('read', 'roles') ||
+    permissionStore.can('read', 'tenants') ||
+    permissionStore.can('read', 'config') ||
+    permissionStore.can('read', 'audit'),
+);
 
 const navItems = computed(() => {
   const items = [
     { path: '/dashboard', label: '工作台', icon: LayoutDashboard },
     { path: '/projects', label: '我的项目', icon: FolderKanban },
     { path: '/vote', label: '投票会议', icon: Vote },
+    { path: '/bulletin', label: '公示区', icon: BarChart3 },
+    { path: '/auctions', label: '竞拍', icon: Gavel },
     { path: '/profile', label: '个人中心', icon: User },
     { path: '/notifications', label: '消息通知', icon: Bell },
   ];
-  if (isAdminRole.value) {
-    items.push({ path: '/admin/hr', label: '管理后台', icon: Settings });
+  if (isAdminVisible.value) {
+    items.push({ path: '/admin', label: '管理后台', icon: Settings });
   }
   return items;
 });

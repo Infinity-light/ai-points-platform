@@ -4,13 +4,23 @@ import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { PointRecord } from '../points/entities/point-record.entity';
 import { Invite } from '../invite/entities/invite.entity';
-import { Role } from '../user/enums/role.enum';
+import { UserRole } from '../rbac/entities/user-role.entity';
+import { ProjectMember } from '../project/entities/project-member.entity';
+import { Project } from '../project/entities/project.entity';
 
 export interface TenantStats {
   totalUsers: number;
-  usersByRole: Record<string, number>;
   totalPointsAwarded: number;
   activeInviteCodes: number;
+}
+
+export interface UserProjectInfo {
+  projectId: string;
+  projectName: string;
+  projectStatus: string;
+  projectRoleId: string;
+  projectRoleName: string | null;
+  joinedAt: Date;
 }
 
 @Injectable()
@@ -22,6 +32,12 @@ export class AdminService {
     private readonly pointRepo: Repository<PointRecord>,
     @InjectRepository(Invite)
     private readonly inviteRepo: Repository<Invite>,
+    @InjectRepository(UserRole)
+    private readonly userRoleRepo: Repository<UserRole>,
+    @InjectRepository(ProjectMember)
+    private readonly projectMemberRepo: Repository<ProjectMember>,
+    @InjectRepository(Project)
+    private readonly projectRepo: Repository<Project>,
   ) {}
 
   async listUsers(tenantId: string): Promise<User[]> {
@@ -31,22 +47,24 @@ export class AdminService {
     });
   }
 
-  async updateUserRole(userId: string, tenantId: string, role: Role): Promise<User> {
+  async updateUserRole(userId: string, tenantId: string, roleId: string): Promise<UserRole> {
     const user = await this.userRepo.findOne({ where: { id: userId, tenantId } });
     if (!user) {
       throw new NotFoundException(`用户 ${userId} 不存在`);
     }
-    user.role = role;
-    return this.userRepo.save(user);
+
+    const existing = await this.userRoleRepo.findOne({ where: { userId } });
+    if (existing) {
+      existing.roleId = roleId;
+      return this.userRoleRepo.save(existing);
+    }
+
+    const userRole = this.userRoleRepo.create({ userId, roleId });
+    return this.userRoleRepo.save(userRole);
   }
 
   async getTenantStats(tenantId: string): Promise<TenantStats> {
-    const users = await this.userRepo.find({ where: { tenantId } });
-
-    const usersByRole: Record<string, number> = {};
-    for (const user of users) {
-      usersByRole[user.role] = (usersByRole[user.role] ?? 0) + 1;
-    }
+    const totalUsers = await this.userRepo.count({ where: { tenantId } });
 
     const pointsResult = await this.pointRepo
       .createQueryBuilder('pr')
@@ -61,8 +79,7 @@ export class AdminService {
     });
 
     return {
-      totalUsers: users.length,
-      usersByRole,
+      totalUsers,
       totalPointsAwarded,
       activeInviteCodes,
     };
@@ -82,5 +99,38 @@ export class AdminService {
     }
     invite.isActive = isActive;
     return this.inviteRepo.save(invite);
+  }
+
+  async getUserProjects(userId: string, tenantId: string): Promise<UserProjectInfo[]> {
+    const user = await this.userRepo.findOne({ where: { id: userId, tenantId } });
+    if (!user) {
+      throw new NotFoundException(`用户 ${userId} 不存在`);
+    }
+
+    const members = await this.projectMemberRepo.find({
+      where: { userId, tenantId },
+      relations: ['projectRole'],
+    });
+
+    const projectIds = members.map((m) => m.projectId);
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    const projects = await this.projectRepo
+      .createQueryBuilder('p')
+      .where('p.id IN (:...ids)', { ids: projectIds })
+      .getMany();
+
+    const projectMap = new Map(projects.map((p) => [p.id, p]));
+
+    return members.map((m) => ({
+      projectId: m.projectId,
+      projectName: projectMap.get(m.projectId)?.name ?? '未知项目',
+      projectStatus: projectMap.get(m.projectId)?.status ?? 'unknown',
+      projectRoleId: m.projectRoleId,
+      projectRoleName: m.projectRole?.name ?? null,
+      joinedAt: m.joinedAt,
+    }));
   }
 }

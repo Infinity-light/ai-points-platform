@@ -11,18 +11,16 @@ import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { Role } from './enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
 
 interface RequestUser {
   id: string;
   tenantId: string;
-  role: Role;
+  email: string;
 }
 
-// JwtAuthGuard 将在 Auth 模块实现后加入
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -37,27 +35,24 @@ export class UserController {
     @CurrentUser() user: RequestUser,
     @Body() dto: UpdateUserDto,
   ): Promise<User> {
-    // 普通用户不能修改自己的角色
-    const { role: _role, ...safeDto } = dto;
-    return this.userService.update(user.id, user.tenantId, safeDto);
+    return this.userService.update(user.id, user.tenantId, dto);
   }
 
-  // HR 管理员接口
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies('users', 'read')
   findAll(@CurrentTenant() tenantId: string): Promise<User[]> {
     return this.userService.findAllByTenant(tenantId);
   }
 
-  @Patch(':id/role')
-  @UseGuards(RolesGuard)
-  @Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
-  updateRole(
+  @Patch(':id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies('users', 'update')
+  updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentTenant() tenantId: string,
-    @Body() dto: Pick<UpdateUserDto, 'role'>,
+    @Body() dto: UpdateUserDto,
   ): Promise<User> {
-    return this.userService.update(id, tenantId, { role: dto.role });
+    return this.userService.update(id, tenantId, dto);
   }
 }

@@ -9,9 +9,8 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { PointsService } from './points.service';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { IsUUID, IsNotEmpty } from 'class-validator';
@@ -27,23 +26,24 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('points')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class PointsController {
   constructor(private readonly pointsService: PointsService) {}
 
   @Get('my-summary')
+  @CheckPolicies('points', 'read')
   getMySummary(@Request() req: RequestWithUser) {
     return this.pointsService.getMySummary(req.user.tenantId, req.user.sub);
   }
 
-  // T08: Profile — personal detail across all projects
   @Get('my-projects')
+  @CheckPolicies('points', 'read')
   getMyProjects(@Request() req: RequestWithUser) {
     return this.pointsService.getMyProjectsDetail(req.user.tenantId, req.user.sub);
   }
 
-  // T04: Team points table for a project
   @Get('project/:projectId/points-table')
+  @CheckPolicies('points', 'read')
   getProjectPointsTable(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Request() req: RequestWithUser,
@@ -51,10 +51,8 @@ export class PointsController {
     return this.pointsService.getProjectPointsTable(req.user.tenantId, projectId);
   }
 
-  // T07: Create approval batch (project_lead+)
   @Post('approval-batch')
-  @UseGuards(RolesGuard)
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('points', 'approve')
   createApprovalBatch(
     @Body() dto: CreateApprovalBatchDto,
     @Request() req: RequestWithUser,

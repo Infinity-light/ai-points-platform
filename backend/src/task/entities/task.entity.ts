@@ -65,6 +65,9 @@ export class Task {
   @Column({ type: 'integer', nullable: true })
   estimatedPoints!: number | null; // 快捷字段（也存在 metadata 中）
 
+  @Column({ type: 'varchar', length: 20, default: 'single' })
+  claimMode!: 'single' | 'multi';
+
   @CreateDateColumn()
   createdAt!: Date;
 

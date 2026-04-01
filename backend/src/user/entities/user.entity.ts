@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
-import { Role } from '../enums/role.enum';
+import { UserRole } from '../../rbac/entities/user-role.entity';
 
 @Entity('users')
 @Index(['tenantId', 'email'], { unique: true })
@@ -30,9 +32,6 @@ export class User {
   @Column({ length: 100 })
   name!: string;
 
-  @Column({ type: 'enum', enum: Role, default: Role.EMPLOYEE })
-  role!: Role;
-
   @Column({ default: false })
   isEmailVerified!: boolean;
 
@@ -47,6 +46,10 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   inviteCodeUsed!: string | null;
+
+  @OneToOne(() => UserRole, { eager: false, nullable: true })
+  @JoinColumn({ name: 'id', referencedColumnName: 'userId' })
+  userRole!: UserRole | null;
 
   @CreateDateColumn()
   createdAt!: Date;

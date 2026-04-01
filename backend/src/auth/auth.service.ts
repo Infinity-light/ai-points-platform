@@ -27,7 +27,6 @@ export interface AuthResponse extends TokenPair {
     id: string;
     email: string;
     name: string;
-    role: string;
     tenantId: string;
     isEmailVerified: boolean;
   };
@@ -199,7 +198,6 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenantId,
-      role: user.role,
     };
 
     const jwtExpiresIn = (this.configService.get<string>('auth.jwtExpiresIn') ?? '15m') as `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
@@ -230,7 +228,6 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
         tenantId: user.tenantId,
         isEmailVerified: user.isEmailVerified,
       },

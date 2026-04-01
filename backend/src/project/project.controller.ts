@@ -15,9 +15,8 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -25,17 +24,18 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('projects')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   @Post()
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('projects', 'create')
   create(@Body() dto: CreateProjectDto, @Request() req: RequestWithUser) {
     return this.projectService.create(req.user.tenantId, req.user.sub, dto);
   }
 
   @Get()
+  @CheckPolicies('projects', 'read')
   findAll(@Request() req: RequestWithUser, @Query('mine') mine?: string) {
     if (mine === 'true') {
       return this.projectService.findMyProjects(req.user.tenantId, req.user.sub);
@@ -44,12 +44,13 @@ export class ProjectController {
   }
 
   @Get(':id')
+  @CheckPolicies('projects', 'read')
   findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.projectService.findOne(id, req.user.tenantId);
   }
 
   @Patch(':id')
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('projects', 'update')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,
@@ -59,18 +60,19 @@ export class ProjectController {
   }
 
   @Patch(':id/archive')
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('projects', 'update')
   archive(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.projectService.archive(id, req.user.tenantId);
   }
 
   @Get(':id/members')
+  @CheckPolicies('projects', 'read')
   getMembers(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.projectService.getMembers(id, req.user.tenantId);
   }
 
   @Post(':id/members')
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('projects', 'update')
   addMember(
     @Param('id') id: string,
     @Body() dto: AddMemberDto,
@@ -80,7 +82,7 @@ export class ProjectController {
   }
 
   @Delete(':id/members/:userId')
-  @Roles(Role.PROJECT_LEAD, Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('projects', 'update')
   removeMember(
     @Param('id') id: string,
     @Param('userId') userId: string,

@@ -3,4 +3,5 @@ export const QUEUE_NAMES = {
   AI_REVIEW: 'ai-review',
   NOTIFICATION: 'notification',
   SETTLEMENT: 'settlement',
+  AUCTION_CLOSE: 'auction-close',
 } as const;

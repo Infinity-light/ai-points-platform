@@ -62,16 +62,33 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/profile/ProfilePage.vue'),
       },
       {
-        path: 'admin/hr',
-        name: 'HrAdmin',
-        component: () => import('@/pages/admin/HrAdminPage.vue'),
+        path: 'admin',
+        name: 'Admin',
+        component: () => import('@/pages/admin/AdminPage.vue'),
         meta: { requiresAuth: true },
       },
       {
+        path: 'admin/hr',
+        redirect: '/admin',
+      },
+      {
         path: 'admin/super',
-        name: 'SuperAdmin',
-        component: () => import('@/pages/admin/SuperAdminPage.vue'),
-        meta: { requiresAuth: true },
+        redirect: '/admin',
+      },
+      {
+        path: 'bulletin',
+        name: 'Bulletin',
+        component: () => import('@/pages/bulletin/BulletinPage.vue'),
+      },
+      {
+        path: 'meeting/:id',
+        name: 'Meeting',
+        component: () => import('@/pages/meeting/MeetingPage.vue'),
+      },
+      {
+        path: 'auctions',
+        name: 'Auctions',
+        component: () => import('@/pages/auctions/AuctionsPage.vue'),
       },
       {
         path: 'notifications',

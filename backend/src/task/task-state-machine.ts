@@ -6,8 +6,9 @@ const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   [TaskStatus.OPEN]: [TaskStatus.CLAIMED, TaskStatus.CANCELLED],
   [TaskStatus.CLAIMED]: [TaskStatus.SUBMITTED, TaskStatus.OPEN, TaskStatus.CANCELLED], // OPEN = 放弃认领
   [TaskStatus.SUBMITTED]: [TaskStatus.AI_REVIEWING, TaskStatus.CANCELLED],
-  [TaskStatus.AI_REVIEWING]: [TaskStatus.PENDING_VOTE, TaskStatus.CANCELLED],
-  [TaskStatus.PENDING_VOTE]: [TaskStatus.SETTLED, TaskStatus.CANCELLED],
+  [TaskStatus.AI_REVIEWING]: [TaskStatus.PENDING_REVIEW, TaskStatus.CANCELLED],
+  [TaskStatus.PENDING_REVIEW]: [TaskStatus.SETTLED, TaskStatus.CANCELLED],
+  [TaskStatus.PENDING_VOTE]: [TaskStatus.SETTLED, TaskStatus.CANCELLED], // 旧流程向后兼容
   [TaskStatus.SETTLED]: [], // 终态，不可转换
   [TaskStatus.CANCELLED]: [], // 终态，不可转换
 };

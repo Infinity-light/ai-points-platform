@@ -9,16 +9,15 @@ import {
   Request,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { UpdateRoleDto } from './dto/update-role.dto';
 import { ToggleInviteDto } from './dto/toggle-invite.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
 import { PointsService } from '../points/points.service';
+import { TenantService } from '../tenant/tenant.service';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsBoolean } from 'class-validator';
 
 class RejectBatchDto {
   @IsOptional()
@@ -26,17 +25,29 @@ class RejectBatchDto {
   note?: string;
 }
 
+class UpdateUserRoleDto {
+  @IsUUID()
+  roleId!: string;
+}
+
+class UpdateTenantSettingsDto {
+  @IsBoolean()
+  @IsOptional()
+  bulletinPublic?: boolean;
+}
+
 interface RequestWithUser extends Request {
   user: JwtPayload;
 }
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
+@CheckPolicies('users', 'read')
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly pointsService: PointsService,
+    private readonly tenantService: TenantService,
   ) {}
 
   @Get('users')
@@ -45,12 +56,13 @@ export class AdminController {
   }
 
   @Patch('users/:id/role')
+  @CheckPolicies('users', 'update')
   updateUserRole(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentTenant() tenantId: string,
-    @Body() dto: UpdateRoleDto,
+    @Body() dto: UpdateUserRoleDto,
   ) {
-    return this.adminService.updateUserRole(id, tenantId, dto.role);
+    return this.adminService.updateUserRole(id, tenantId, dto.roleId);
   }
 
   @Get('stats')
@@ -64,6 +76,7 @@ export class AdminController {
   }
 
   @Patch('invites/:id/toggle')
+  @CheckPolicies('users', 'update')
   toggleInviteCode(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentTenant() tenantId: string,
@@ -72,7 +85,32 @@ export class AdminController {
     return this.adminService.toggleInviteCode(id, tenantId, dto.isActive);
   }
 
-  // T07: Approval batch management
+  @Get('users/:id/projects')
+  getUserProjects(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.adminService.getUserProjects(id, tenantId);
+  }
+
+  @Get('tenant-settings')
+  getTenantSettings(@CurrentTenant() tenantId: string) {
+    return this.tenantService.findOne(tenantId).then((t) => ({ settings: t.settings ?? {} }));
+  }
+
+  @Patch('tenant-settings')
+  @CheckPolicies('config', 'update')
+  async updateTenantSettings(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: UpdateTenantSettingsDto,
+  ) {
+    const tenant = await this.tenantService.findOne(tenantId);
+    const merged = { ...(tenant.settings ?? {}), ...dto };
+    // Pass as unknown to bypass strict UpdateTenantDto typing
+    await this.tenantService.update(tenantId, { settings: merged } as unknown as Parameters<typeof this.tenantService.update>[1]);
+    return { settings: merged };
+  }
+
   @Get('approval-batches')
   listApprovalBatches(@CurrentTenant() tenantId: string) {
     return this.pointsService.listPendingBatches(tenantId);
@@ -87,6 +125,7 @@ export class AdminController {
   }
 
   @Patch('approval-batches/:id/approve')
+  @CheckPolicies('points', 'approve')
   approveApprovalBatch(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentTenant() tenantId: string,
@@ -96,6 +135,7 @@ export class AdminController {
   }
 
   @Patch('approval-batches/:id/reject')
+  @CheckPolicies('points', 'approve')
   rejectApprovalBatch(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentTenant() tenantId: string,

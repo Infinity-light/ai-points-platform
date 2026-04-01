@@ -1,6 +1,6 @@
 import api from '@/lib/axios';
 
-export type TaskStatus = 'open' | 'claimed' | 'submitted' | 'ai_reviewing' | 'pending_vote' | 'settled' | 'cancelled';
+export type TaskStatus = 'open' | 'claimed' | 'submitted' | 'ai_reviewing' | 'pending_review' | 'pending_vote' | 'settled' | 'cancelled';
 
 export interface Task {
   id: string;

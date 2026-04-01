@@ -10,9 +10,8 @@ import {
 } from '@nestjs/common';
 import { DividendService } from './dividend.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../user/guards/roles.guard';
-import { Roles } from '../user/decorators/roles.decorator';
-import { Role } from '../user/enums/role.enum';
+import { PoliciesGuard } from '../rbac/policies.guard';
+import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { IsNumber, IsPositive } from 'class-validator';
 
@@ -27,11 +26,12 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('dividends')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class DividendController {
   constructor(private readonly dividendService: DividendService) {}
 
   @Get('project/:projectId')
+  @CheckPolicies('dividends', 'read')
   findForProject(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Request() req: RequestWithUser,
@@ -40,6 +40,7 @@ export class DividendController {
   }
 
   @Get(':id')
+  @CheckPolicies('dividends', 'read')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: RequestWithUser,
@@ -48,6 +49,7 @@ export class DividendController {
   }
 
   @Patch(':id/fill-amount')
+  @CheckPolicies('dividends', 'create')
   fillAmount(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: FillAmountDto,
@@ -57,8 +59,7 @@ export class DividendController {
   }
 
   @Patch(':id/approve')
-  @UseGuards(RolesGuard)
-  @Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('dividends', 'create')
   approve(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: RequestWithUser,
@@ -67,8 +68,7 @@ export class DividendController {
   }
 
   @Patch(':id/reject')
-  @UseGuards(RolesGuard)
-  @Roles(Role.HR_ADMIN, Role.SUPER_ADMIN)
+  @CheckPolicies('dividends', 'create')
   reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: RequestWithUser,

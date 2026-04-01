@@ -11,8 +11,33 @@ import { validateTransition, getAllowedTransitions } from './task-state-machine'
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
+export type ClaimTaskResult =
+  | { kind: 'claimed'; task: Task }
+  | { kind: 'auction_created'; auctionId: string; taskId: string };
+
 @Injectable()
 export class TaskService {
+  // Injected lazily to avoid circular dependency with AuctionModule
+  auctionServiceRef?: {
+    create: (opts: {
+      tenantId: string;
+      createdBy: string;
+      dto: {
+        type: 'task_claim';
+        targetEntity: string;
+        targetId: string;
+        description: string;
+        endsAt: Date;
+      };
+    }) => Promise<{ id: string }>;
+    placeBid: (opts: {
+      auctionId: string;
+      userId: string;
+      tenantId: string;
+      amount: number;
+    }) => Promise<unknown>;
+  };
+
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
@@ -103,7 +128,7 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.findOne(id, tenantId);
     task.metadata = { ...task.metadata, aiScores };
-    task.status = TaskStatus.PENDING_VOTE;
+    task.status = TaskStatus.PENDING_REVIEW;
     return this.taskRepository.save(task);
   }
 
@@ -120,5 +145,65 @@ export class TaskService {
       where: { tenantId, assigneeId: userId },
       order: { updatedAt: 'DESC' },
     });
+  }
+
+  /**
+   * 认领任务，支持竞拍模式：
+   * - claimMode='multi'：允许多人认领，直接设置 assigneeId（或追加）
+   * - claimMode='single' 且已有认领者：创建竞拍，第一认领者自动出价 0
+   * - claimMode='single' 且尚未认领：直接认领
+   */
+  async claimTask(opts: {
+    taskId: string;
+    tenantId: string;
+    userId: string;
+  }): Promise<ClaimTaskResult> {
+    const { taskId, tenantId, userId } = opts;
+    const task = await this.findOne(taskId, tenantId);
+
+    if (task.claimMode === 'multi') {
+      // 多人认领：设置 assigneeId 为请求者（last-writer 语义，业务上允许多人同时跑）
+      task.assigneeId = userId;
+      task.status = TaskStatus.CLAIMED;
+      const saved = await this.taskRepository.save(task);
+      return { kind: 'claimed', task: saved };
+    }
+
+    // single 模式
+    if (!task.assigneeId) {
+      // 无人认领，直接认领
+      task.assigneeId = userId;
+      task.status = TaskStatus.CLAIMED;
+      const saved = await this.taskRepository.save(task);
+      return { kind: 'claimed', task: saved };
+    }
+
+    // 已有人认领：触发竞拍
+    if (!this.auctionServiceRef) {
+      throw new ForbiddenException('任务已被认领，竞拍服务不可用');
+    }
+
+    const endsAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const auction = await this.auctionServiceRef.create({
+      tenantId,
+      createdBy: userId,
+      dto: {
+        type: 'task_claim',
+        targetEntity: 'task',
+        targetId: taskId,
+        description: `任务认领竞拍：${task.title}`,
+        endsAt,
+      },
+    });
+
+    // 当前认领者自动出价 0
+    await this.auctionServiceRef.placeBid({
+      auctionId: auction.id,
+      userId: task.assigneeId,
+      tenantId,
+      amount: 0,
+    });
+
+    return { kind: 'auction_created', auctionId: auction.id, taskId };
   }
 }

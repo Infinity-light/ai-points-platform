@@ -22,6 +22,12 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
 import { NotificationModule } from './notification/notification.module';
 import { DividendModule } from './dividend/dividend.module';
 import { SkillModule } from './skill/skill.module';
+import { RbacModule } from './rbac/rbac.module';
+import { AuditModule } from './audit/audit.module';
+import { MeetingModule } from './meeting/meeting.module';
+import { AuctionModule } from './auction/auction.module';
+import { BulletinModule } from './bulletin/bulletin.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import authConfig from './config/auth.config';
@@ -55,6 +61,12 @@ import aiConfig from './config/ai.config';
     NotificationModule,
     DividendModule,
     SkillModule,
+    RbacModule,
+    AuditModule,
+    MeetingModule,
+    AuctionModule,
+    BulletinModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
 })

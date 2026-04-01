@@ -10,6 +10,7 @@ const statusConfig: Record<TaskStatus, { label: string; class: string }> = {
   claimed: { label: '进行中', class: 'bg-primary/10 text-primary border-primary/30' },
   submitted: { label: '已提交', class: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
   ai_reviewing: { label: 'AI审中', class: 'bg-accent/10 text-accent border-accent/30' },
+  pending_review: { label: '待评审', class: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
   pending_vote: { label: '待投票', class: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
   settled: { label: '已固化', class: 'bg-green-500/10 text-green-400 border-green-500/30' },
   cancelled: { label: '已取消', class: 'bg-red-500/10 text-red-400 border-red-500/30 line-through' },
