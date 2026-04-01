@@ -22,16 +22,16 @@ export class Role {
   @Index()
   tenantId!: string | null;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   name!: string;
 
-  @Column({ length: 500, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   description!: string | null;
 
   @Column({ type: 'varchar', length: 20 })
   scope!: RoleScope;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   isSystem!: boolean;
 
   @OneToMany(() => RolePermission, (rp) => rp.role, { eager: false })

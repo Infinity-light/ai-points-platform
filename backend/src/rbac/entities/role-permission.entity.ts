@@ -23,9 +23,9 @@ export class RolePermission {
   @JoinColumn({ name: 'roleId' })
   role!: Role;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   resource!: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   action!: string;
 }

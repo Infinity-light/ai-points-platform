@@ -20,13 +20,13 @@ export class AuditLog {
   @Column({ type: 'uuid' })
   actorId!: string;
 
-  @Column({ length: 200 })
+  @Column({ type: 'varchar', length: 200 })
   actorName!: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   action!: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   resource!: string;
 
   @Column({ type: 'uuid', nullable: true })
@@ -38,7 +38,7 @@ export class AuditLog {
   @Column({ type: 'jsonb', nullable: true })
   newData!: Record<string, unknown> | null;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   ipAddress!: string | null;
 
   @CreateDateColumn()

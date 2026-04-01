@@ -26,7 +26,7 @@ export class PointsSnapshot {
   @Column('uuid')
   userId!: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   userName!: string;
 
   @Column({ type: 'int', default: 0 })
