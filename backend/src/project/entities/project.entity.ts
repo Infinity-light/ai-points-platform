@@ -12,6 +12,18 @@ export enum ProjectStatus {
   ARCHIVED = 'archived',
 }
 
+export interface FieldDef {
+  key: string;
+  name: string;
+  type: 'text' | 'number' | 'date' | 'single_select' | 'multi_select';
+  options?: string[];
+  order: number;
+}
+
+export interface ProjectMetadata {
+  customFields?: FieldDef[];
+}
+
 export interface AnnealingConfig {
   cyclesPerStep: number; // 每档需要经历的结算次数，默认3
   maxSteps: number;      // 最大档数（tier >= maxSteps 时清零），默认4 → 12次结算后清零
@@ -60,6 +72,9 @@ export class Project {
 
   @Column({ default: 0 })
   settlementRound!: number; // 当前结算轮次计数
+
+  @Column({ type: 'jsonb', default: {} })
+  metadata!: ProjectMetadata;
 
   @CreateDateColumn()
   createdAt!: Date;

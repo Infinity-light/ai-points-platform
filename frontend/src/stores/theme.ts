@@ -10,6 +10,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   function apply(t: Theme) {
     document.documentElement.classList.toggle('dark', t === 'dark');
+    document.documentElement.setAttribute('data-vxe-ui-theme', t === 'dark' ? 'dark' : 'light');
   }
 
   // Apply on init

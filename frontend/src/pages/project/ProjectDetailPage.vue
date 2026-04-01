@@ -2,17 +2,20 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { projectApi, type Project } from '@/services/project';
-import { taskApi, submissionApi, type Task, type TaskStatus, type Submission } from '@/services/task';
-import { ChevronLeft, Plus, X, ChevronDown, Brain, ExternalLink, Video } from 'lucide-vue-next';
+import { taskApi, submissionApi, type Task, type Submission } from '@/services/task';
+import { ChevronLeft, X, ChevronDown, Brain, ExternalLink, Video, Settings } from 'lucide-vue-next';
 import { dividendApi, type Dividend } from '@/services/dividend';
 import { skillApi, type Skill } from '@/services/skill';
 import { pointsApi, type PointsTableRow } from '@/services/points';
 import { meetingApi } from '@/services/meeting';
+import { adminApi, type AdminUser } from '@/services/admin';
+import { customFieldsApi, type FieldDef } from '@/services/custom-fields';
 import { useAuthStore } from '@/stores/auth';
 import { usePermissionStore } from '@/stores/permission';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import StatusBadge from '@/components/ui/StatusBadge.vue';
 import TaskSubmitModal from '@/components/TaskSubmitModal.vue';
+import TaskDataGrid, { type Member } from '@/components/TaskDataGrid.vue';
+import ColumnManagerPanel from '@/components/ColumnManagerPanel.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,14 +51,14 @@ const loading = ref(true);
 
 // ─── 任务 Tab ────────────────────────────────────────────────────────────────
 const tasks = ref<Task[]>([]);
-const taskFilter = ref<TaskStatus | 'all'>('all');
-const showCreateTask = ref(false);
-const newTaskTitle = ref('');
-const createLoading = ref(false);
 const selectedTask = ref<Task | null>(null);
 const showSubmitModal = ref(false);
 const taskSubmissions = ref<Submission[]>([]);
 const loadingSubmissions = ref(false);
+const memberUsers = ref<Member[]>([]);
+const customColumns = ref<FieldDef[]>([]);
+const showColumnManager = ref(false);
+const isProjectLead = computed(() => permissionStore.can('update', 'projects'));
 
 // ─── 公分表 Tab ──────────────────────────────────────────────────────────────
 const pointsRows = ref<PointsTableRow[]>([]);
@@ -87,12 +90,21 @@ const skillDetailLoading = ref(false);
 // ─── 初始化加载 ──────────────────────────────────────────────────────────────
 async function load() {
   try {
-    const [projRes, taskRes] = await Promise.all([
+    const [projRes, taskRes, membersRes, allUsers, customFieldsRes] = await Promise.all([
       projectApi.get(projectId.value),
       taskApi.list(projectId.value),
+      projectApi.getMembers(projectId.value),
+      adminApi.listUsers(),
+      customFieldsApi.get(projectId.value),
     ]);
     project.value = projRes.data;
     tasks.value = taskRes.data;
+    const userMap = new Map((allUsers as AdminUser[]).map((u) => [u.id, u.name]));
+    memberUsers.value = membersRes.data.map((m) => ({
+      id: m.userId,
+      name: userMap.get(m.userId) ?? m.userId,
+    }));
+    customColumns.value = customFieldsRes.data;
   } catch {
     // ignore
   } finally {
@@ -116,36 +128,17 @@ watch(activeTab, (tab) => {
 });
 
 // ─── 任务功能 ────────────────────────────────────────────────────────────────
-const filteredTasks = computed(() => {
-  if (taskFilter.value === 'all') return tasks.value;
-  return tasks.value.filter((t) => t.status === taskFilter.value);
-});
-
-async function createTask() {
-  if (!newTaskTitle.value.trim()) return;
-  createLoading.value = true;
-  try {
-    const res = await taskApi.create(projectId.value, {
-      title: newTaskTitle.value.trim(),
-    });
-    tasks.value.unshift(res.data);
-    newTaskTitle.value = '';
-    showCreateTask.value = false;
-  } catch {
-    // ignore
-  } finally {
-    createLoading.value = false;
-  }
+function onTaskUpdated(task: Task): void {
+  const idx = tasks.value.findIndex((t) => t.id === task.id);
+  if (idx !== -1) tasks.value[idx] = task;
 }
 
-async function claimTask(task: Task) {
-  try {
-    const res = await taskApi.transition(projectId.value, task.id, 'claimed');
-    const idx = tasks.value.findIndex((t) => t.id === task.id);
-    if (idx !== -1) tasks.value[idx] = res.data;
-  } catch {
-    // ignore
-  }
+function onTaskCreated(task: Task): void {
+  tasks.value.unshift(task);
+}
+
+function onFieldsUpdated(fields: FieldDef[]): void {
+  customColumns.value = fields;
 }
 
 async function selectTask(task: Task) {
@@ -344,16 +337,6 @@ const aiScoreLabels: Record<string, string> = {
   execution: '执行',
 };
 
-const filterOptions: Array<{ value: TaskStatus | 'all'; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'open', label: '待认领' },
-  { value: 'claimed', label: '进行中' },
-  { value: 'submitted', label: '已提交' },
-  { value: 'ai_reviewing', label: 'AI审中' },
-  { value: 'pending_review', label: '待评审' },
-  { value: 'settled', label: '已固化' },
-];
-
 const reviewStatusLabel: Record<Submission['aiReviewStatus'], string> = {
   pending: '待评审',
   processing: 'AI评审中',
@@ -430,135 +413,55 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <!-- ── 任务 Tab ──────────────────────────────────────────────────────── -->
       <div v-if="activeTab === 'tasks'">
         <p v-if="meetingError" class="text-xs text-red-400 mb-2">{{ meetingError }}</p>
-        <div class="flex gap-4 items-start">
-        <!-- Task table section -->
-        <div class="flex-1 min-w-0 glass-card">
-          <!-- Table header -->
-          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div class="flex items-center gap-2 overflow-x-auto">
-              <button
-                v-for="opt in filterOptions"
-                :key="opt.value"
-                class="text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors"
-                :class="
-                  taskFilter === opt.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                "
-                @click="taskFilter = opt.value"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-            <div class="flex items-center gap-2">
-              <BaseButton
-                v-if="permissionStore.can('create', 'votes')"
-                size="sm"
-                variant="ghost"
-                :loading="meetingCreating"
-                class="transition-colors duration-200 text-primary hover:bg-primary/10"
-                @click="openReviewMeeting"
-              >
-                <Video class="w-3.5 h-3.5 mr-1" />
-                开启评审
-              </BaseButton>
-              <BaseButton size="sm" class="transition-colors duration-200" @click="showCreateTask = !showCreateTask">
-                <Plus class="w-3.5 h-3.5 mr-1" />
-                新任务
-              </BaseButton>
-            </div>
-          </div>
 
-          <!-- Quick create task row -->
-          <div v-if="showCreateTask" class="px-4 py-3 border-b border-border bg-secondary/30">
-            <div class="flex items-center gap-3">
-              <input
-                v-model="newTaskTitle"
-                placeholder="输入任务标题..."
-                class="flex-1 px-3 py-1.5 text-sm rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                @keyup.enter="createTask"
-              />
-              <BaseButton size="sm" :loading="createLoading" @click="createTask">添加</BaseButton>
-              <BaseButton
-                size="sm"
-                variant="ghost"
-                @click="showCreateTask = false; newTaskTitle = ''"
-              >
-                取消
-              </BaseButton>
-            </div>
-          </div>
-
-          <!-- Task rows -->
-          <div
-            v-if="filteredTasks.length === 0"
-            class="py-12 text-center text-muted-foreground text-sm"
-          >
-            {{ taskFilter === 'all' ? '还没有任务，点击「新任务」开始添加' : '此状态下没有任务' }}
-          </div>
-
-          <div v-else class="divide-y divide-border">
-            <div
-              v-for="task in filteredTasks"
-              :key="task.id"
-              class="flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors duration-200 cursor-pointer"
-              :class="{ 'bg-secondary/40': selectedTask?.id === task.id }"
-              @click="selectTask(task)"
+        <!-- 工具栏 -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <BaseButton
+              v-if="isProjectLead"
+              size="sm"
+              variant="ghost"
+              class="text-muted-foreground"
+              @click="showColumnManager = true"
             >
-              <StatusBadge :status="task.status" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-foreground truncate">{{ task.title }}</p>
-                <p v-if="task.description" class="text-xs text-muted-foreground mt-0.5 truncate">
-                  {{ task.description }}
-                </p>
-              </div>
-              <div
-                v-if="task.metadata?.aiScores"
-                class="text-xs text-muted-foreground flex items-center gap-1"
-              >
-                <span class="text-primary font-medium">
-                  {{ task.metadata.aiScores.average.toFixed(1) }}/5
-                </span>
-                <span>AI分</span>
-              </div>
-              <div class="text-xs text-muted-foreground w-16 text-right">
-                <span v-if="task.metadata?.finalPoints" class="text-green-400 font-mono font-medium">
-                  {{ task.metadata.finalPoints }}分
-                </span>
-              </div>
-              <div class="w-28 flex justify-end gap-1.5">
-                <BaseButton
-                  v-if="task.status === 'open'"
-                  size="sm"
-                  variant="outline"
-                  @click.stop="claimTask(task)"
-                >
-                  认领
-                </BaseButton>
-                <BaseButton
-                  v-if="task.status === 'claimed' && task.assigneeId === authStore.user?.id"
-                  size="sm"
-                  @click="openSubmitModal(task, $event)"
-                >
-                  提交
-                </BaseButton>
-                <span
-                  v-else-if="task.status !== 'open' && task.assigneeId === authStore.user?.id"
-                  class="text-xs text-primary font-medium self-center"
-                >
-                  我负责
-                </span>
-              </div>
-            </div>
+              <Settings class="w-3.5 h-3.5 mr-1" />
+              列管理
+            </BaseButton>
           </div>
+          <BaseButton
+            v-if="permissionStore.can('create', 'votes')"
+            size="sm"
+            variant="ghost"
+            :loading="meetingCreating"
+            class="transition-colors duration-200 text-primary hover:bg-primary/10"
+            @click="openReviewMeeting"
+          >
+            <Video class="w-3.5 h-3.5 mr-1" />
+            开启评审
+          </BaseButton>
         </div>
 
-        <!-- Side panel -->
-        <div
-          v-if="selectedTask"
-          class="w-80 shrink-0 glass-card overflow-auto"
-          style="max-height: calc(100vh - 12rem);"
-        >
+        <div class="flex gap-4 items-start">
+          <!-- TaskDataGrid -->
+          <div class="flex-1 min-w-0">
+            <TaskDataGrid
+              :tasks="tasks"
+              :loading="loading"
+              :project-id="projectId"
+              :members="memberUsers"
+              :custom-columns="customColumns"
+              @select:task="selectTask"
+              @update:task="onTaskUpdated"
+              @create:task="onTaskCreated"
+            />
+          </div>
+
+          <!-- Side panel -->
+          <div
+            v-if="selectedTask"
+            class="w-80 shrink-0 glass-card overflow-auto"
+            style="max-height: calc(100vh - 12rem);"
+          >
           <div
             class="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-card/80 z-10"
           >
@@ -639,8 +542,17 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               </div>
             </div>
           </div>
+          </div>
         </div>
-        </div>
+
+        <!-- ColumnManagerPanel drawer -->
+        <ColumnManagerPanel
+          :project-id="projectId"
+          :open="showColumnManager"
+          :is-project-lead="isProjectLead"
+          @update:open="showColumnManager = $event"
+          @fields-updated="onFieldsUpdated"
+        />
       </div>
 
       <!-- ── 公分表 Tab ─────────────────────────────────────────────────────── -->

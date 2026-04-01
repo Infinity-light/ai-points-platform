@@ -228,6 +228,9 @@ importers:
       vue-router:
         specifier: ^4.6.4
         version: 4.6.4(vue@3.5.31(typescript@5.9.3))
+      vxe-table:
+        specifier: ^4.18.10
+        version: 4.18.10(vue@3.5.31(typescript@5.9.3))
     devDependencies:
       '@types/node':
         specifier: ^24.12.0
@@ -1734,6 +1737,11 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
+  '@vxe-ui/core@4.4.3':
+    resolution: {integrity: sha512-IIwi5+h7Yopq3Ps+JtlSmggUQZg3wvzuad2xuWGR9sNzR/r0qlWKfax7qimrM2UNpVhSF1jI+3Z9+3yg+HPYTw==}
+    peerDependencies:
+      vue: ^3.2.0
+
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
 
@@ -2435,6 +2443,9 @@ packages:
 
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
+
+  dom-zindex@1.0.6:
+    resolution: {integrity: sha512-FKWIhiU96bi3xpP9ewRMgANsoVmMUBnMnmpCT6dPMZOunVYJQmJhSRruoI0XSPoHeIif3kyEuiHbFrOJwEJaEA==}
 
   domelementtype@2.3.0:
     resolution: {integrity: sha512-OLETBj6w0OsagBwdXnPdN0cnMfF9opN69co+7ZrbfPGrdpPVNBUj02spi6B1N7wChLQiPn4CSH/zJvXw56gmHw==}
@@ -4978,6 +4989,12 @@ packages:
       typescript:
         optional: true
 
+  vxe-pc-ui@4.13.20:
+    resolution: {integrity: sha512-AZqFcE5M+KPPIOdPxvQ2Ny+Zf152seKY/o6zqSjHWWzX4EGHYd7dpw3Qrnlp1VT1gVd1Nq599TsSq2MAOR7MaQ==}
+
+  vxe-table@4.18.10:
+    resolution: {integrity: sha512-8V9WL83pB4PrvgBS6DoDU7dSRxOlJw9ZkVcxDnKBFQkTTnLVvC8HYOJ75uwfRNyo9cALNIpJnSkow2uqaMKbNQ==}
+
   walker@1.0.8:
     resolution: {integrity: sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==}
 
@@ -5064,6 +5081,9 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xe-utils@4.0.4:
+    resolution: {integrity: sha512-1IUuTZRHa5w88Y3kEf0O4Y/99O0hIdh5o8EXqmgqyhY3MaT1xWZgS5iuD7pys6v+9JrJOzECb07+6gxRahDsyw==}
 
   xml-name-validator@4.0.0:
     resolution: {integrity: sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==}
@@ -6874,6 +6894,12 @@ snapshots:
     dependencies:
       vue: 3.5.31(typescript@5.9.3)
 
+  '@vxe-ui/core@4.4.3(vue@3.5.31(typescript@5.9.3))':
+    dependencies:
+      dom-zindex: 1.0.6
+      vue: 3.5.31(typescript@5.9.3)
+      xe-utils: 4.0.4
+
   '@webassemblyjs/ast@1.14.1':
     dependencies:
       '@webassemblyjs/helper-numbers': 1.13.2
@@ -7582,6 +7608,8 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       entities: 4.5.0
+
+  dom-zindex@1.0.6: {}
 
   domelementtype@2.3.0: {}
 
@@ -10404,6 +10432,18 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  vxe-pc-ui@4.13.20(vue@3.5.31(typescript@5.9.3)):
+    dependencies:
+      '@vxe-ui/core': 4.4.3(vue@3.5.31(typescript@5.9.3))
+    transitivePeerDependencies:
+      - vue
+
+  vxe-table@4.18.10(vue@3.5.31(typescript@5.9.3)):
+    dependencies:
+      vxe-pc-ui: 4.13.20(vue@3.5.31(typescript@5.9.3))
+    transitivePeerDependencies:
+      - vue
+
   walker@1.0.8:
     dependencies:
       makeerror: 1.0.12
@@ -10509,6 +10549,8 @@ snapshots:
       signal-exit: 4.1.0
 
   ws@8.18.3: {}
+
+  xe-utils@4.0.4: {}
 
   xml-name-validator@4.0.0: {}
 
