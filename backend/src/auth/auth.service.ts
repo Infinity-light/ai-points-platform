@@ -16,6 +16,12 @@ import { RegisterOrgDto } from './dto/register-org.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { User } from '../user/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserRole } from '../rbac/entities/user-role.entity';
+
+/** Well-known UUID for the seeded super_admin role (migration 018) */
+const SUPER_ADMIN_ROLE_ID = '00000000-0000-0000-0000-000000000001';
 
 export interface TokenPair {
   accessToken: string;
@@ -45,6 +51,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
+    @InjectRepository(UserRole)
+    private readonly userRoleRepo: Repository<UserRole>,
   ) {}
 
   async register(dto: RegisterDto): Promise<{ userId: string; message: string }> {
@@ -118,7 +126,12 @@ export class AuthService {
       throw err;
     }
 
-    // 3. 发送验证码
+    // 3. 分配 super_admin 角色给组织创建者
+    await this.userRoleRepo.save(
+      this.userRoleRepo.create({ userId: user.id, roleId: SUPER_ADMIN_ROLE_ID }),
+    );
+
+    // 4. 发送验证码
     const code = generateCode(6);
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
     await this.userService.updateEmailVerification(user.id, code, expiry);

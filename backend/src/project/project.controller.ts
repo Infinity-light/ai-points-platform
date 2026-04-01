@@ -40,7 +40,7 @@ export class ProjectController {
     if (mine === 'true') {
       return this.projectService.findMyProjects(req.user.tenantId, req.user.sub);
     }
-    return this.projectService.findAll(req.user.tenantId);
+    return this.projectService.findAll(req.user.tenantId, req.user.sub);
   }
 
   @Get(':id')

@@ -41,11 +41,38 @@ export class ProjectService {
     return saved;
   }
 
-  async findAll(tenantId: string): Promise<Project[]> {
-    return this.projectRepository.find({
-      where: { tenantId },
-      order: { createdAt: 'DESC' },
-    });
+  /**
+   * 可见性规则：
+   * - project_lead / hr_admin / super_admin 创建的项目 → 所有人可见
+   * - employee 创建的项目 → 仅创建者本人及项目成员可见
+   */
+  async findAll(tenantId: string, currentUserId: string): Promise<Project[]> {
+    // Roles that make a project publicly visible within the tenant
+    const publicRoleIds = [
+      '00000000-0000-0000-0000-000000000001', // super_admin
+      '00000000-0000-0000-0000-000000000002', // hr_admin
+      '00000000-0000-0000-0000-000000000003', // project_lead
+    ];
+
+    return this.projectRepository
+      .createQueryBuilder('p')
+      .where('p.tenantId = :tenantId', { tenantId })
+      .andWhere(
+        `(
+          p."createdBy" = :currentUserId
+          OR EXISTS (
+            SELECT 1 FROM "project_members" pm
+            WHERE pm."projectId" = p."id" AND pm."userId" = :currentUserId
+          )
+          OR EXISTS (
+            SELECT 1 FROM "user_roles" ur
+            WHERE ur."userId" = p."createdBy" AND ur."roleId" IN (:...publicRoleIds)
+          )
+        )`,
+        { currentUserId, publicRoleIds },
+      )
+      .orderBy('p.createdAt', 'DESC')
+      .getMany();
   }
 
   async findMyProjects(tenantId: string, userId: string): Promise<Project[]> {
