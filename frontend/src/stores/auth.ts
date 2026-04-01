@@ -29,17 +29,24 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
     localStorage.setItem('user', JSON.stringify(userData));
+    // Load permissions after login
+    const permissionStore = usePermissionStore();
+    void permissionStore.fetchPermissions();
   }
 
   async function fetchUser(): Promise<void> {
-    if (userLoaded.value || !accessToken.value) return;
+    if (!accessToken.value) return;
+    // Always ensure permissions are loaded
+    const permissionStore = usePermissionStore();
+    if (!permissionStore.loaded) {
+      void permissionStore.fetchPermissions();
+    }
+    if (userLoaded.value) return;
     try {
       const res = await api.get<AuthUser>('/users/me');
       user.value = res.data;
       userLoaded.value = true;
       localStorage.setItem('user', JSON.stringify(res.data));
-      const permissionStore = usePermissionStore();
-      void permissionStore.fetchPermissions();
     } catch {
       // Token invalid — clear auth
       logout();
