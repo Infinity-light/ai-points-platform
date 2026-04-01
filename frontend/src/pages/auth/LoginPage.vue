@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/services/auth';
@@ -7,7 +7,7 @@ import FormField from '@/components/ui/FormField.vue';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import SpaceBackground from '@/components/SpaceBackground.vue';
-import { Rocket, Brain, Shield, TrendingUp, Eye, EyeOff } from 'lucide-vue-next';
+import { Rocket, Eye, EyeOff } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -16,6 +16,13 @@ const form = reactive({
   tenantSlug: '',
   email: '',
   password: '',
+});
+
+onMounted(() => {
+  const savedSlug = localStorage.getItem('last_tenant_slug');
+  const savedEmail = localStorage.getItem('last_email');
+  if (savedSlug) form.tenantSlug = savedSlug;
+  if (savedEmail) form.email = savedEmail;
 });
 
 const errors = reactive({
@@ -47,6 +54,8 @@ async function handleSubmit() {
       tenantSlug: form.tenantSlug.trim(),
     });
     authStore.setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
+    localStorage.setItem('last_tenant_slug', form.tenantSlug.trim());
+    localStorage.setItem('last_email', form.email);
     await router.push('/dashboard');
   } catch (err: unknown) {
     const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -74,40 +83,25 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- Center: Hero -->
-      <div class="flex-1 flex flex-col justify-center max-w-lg">
-        <h2 class="font-heading text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-6">
-          让每一颗创新的种子<br/>
-          <span class="text-lunar">生根发芽</span>
-        </h2>
-        <p class="text-lg text-muted-foreground leading-relaxed">
-          向赛博时代的乌托邦砥砺前行
-        </p>
+      <!-- Center: Rocket Illustration -->
+      <div class="flex-1 flex items-center justify-center">
+        <div class="relative">
+          <div class="absolute inset-0 -m-20 rounded-full bg-primary/5 blur-3xl"></div>
+          <div class="relative w-72 h-72 xl:w-80 xl:h-80 rounded-full bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.08] flex items-center justify-center">
+            <div class="absolute top-10 left-14 w-10 h-10 rounded-full bg-white/[0.04]"></div>
+            <div class="absolute bottom-16 right-10 w-14 h-14 rounded-full bg-white/[0.03]"></div>
+            <div class="absolute top-20 right-16 w-6 h-6 rounded-full bg-white/[0.04]"></div>
+            <Rocket class="w-20 h-20 xl:w-24 xl:h-24 text-primary -rotate-45" style="filter: drop-shadow(0 0 24px hsl(var(--primary) / 0.4))" />
+          </div>
+          <div class="absolute -top-6 left-8 w-2 h-2 rounded-full bg-primary/50 animate-pulse"></div>
+          <div class="absolute top-12 -right-8 w-1.5 h-1.5 rounded-full bg-accent/50 animate-pulse" style="animation-delay: 0.5s"></div>
+          <div class="absolute -bottom-4 left-20 w-1 h-1 rounded-full bg-primary/40 animate-pulse" style="animation-delay: 1s"></div>
+        </div>
       </div>
 
-      <!-- Bottom: Features -->
-      <div class="grid grid-cols-3 gap-6">
-        <div class="flex flex-col gap-2">
-          <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Brain class="w-4 h-4 text-primary" />
-          </div>
-          <p class="text-sm font-medium text-foreground">AI 智能评审</p>
-          <p class="text-xs text-muted-foreground">三维度自动评分</p>
-        </div>
-        <div class="flex flex-col gap-2">
-          <div class="w-9 h-9 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
-            <Shield class="w-4 h-4 text-accent" />
-          </div>
-          <p class="text-sm font-medium text-foreground">公平工分</p>
-          <p class="text-xs text-muted-foreground">退火机制防固化</p>
-        </div>
-        <div class="flex flex-col gap-2">
-          <div class="w-9 h-9 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-            <TrendingUp class="w-4 h-4 text-green-400" />
-          </div>
-          <p class="text-sm font-medium text-foreground">智能分派</p>
-          <p class="text-xs text-muted-foreground">AI 驱动任务匹配</p>
-        </div>
+      <!-- Bottom -->
+      <div class="text-xs text-muted-foreground">
+        &copy; {{ new Date().getFullYear() }} Cytopia. All rights reserved.
       </div>
     </div>
 
@@ -140,7 +134,7 @@ async function handleSubmit() {
             <FormField label="组织标识" :error="errors.tenantSlug" required>
               <BaseInput
                 v-model="form.tenantSlug"
-                placeholder="例如：shenbi-team"
+                placeholder="例如：cytopia"
                 :error="!!errors.tenantSlug"
                 autocomplete="organization"
                 @input="errors.tenantSlug = ''"

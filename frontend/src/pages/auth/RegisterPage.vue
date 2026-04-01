@@ -199,14 +199,19 @@ function switchMode(newMode: 'join' | 'create') {
         </div>
       </div>
 
-      <div class="flex-1 flex flex-col justify-center max-w-lg">
-        <h2 class="font-heading text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-6">
-          让每一颗创新的种子<br/>
-          <span class="text-lunar">生根发芽</span>
-        </h2>
-        <p class="text-lg text-muted-foreground leading-relaxed">
-          向赛博时代的乌托邦砥砺前行
-        </p>
+      <div class="flex-1 flex items-center justify-center">
+        <div class="relative">
+          <div class="absolute inset-0 -m-20 rounded-full bg-primary/5 blur-3xl"></div>
+          <div class="relative w-72 h-72 xl:w-80 xl:h-80 rounded-full bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.08] flex items-center justify-center">
+            <div class="absolute top-10 left-14 w-10 h-10 rounded-full bg-white/[0.04]"></div>
+            <div class="absolute bottom-16 right-10 w-14 h-14 rounded-full bg-white/[0.03]"></div>
+            <div class="absolute top-20 right-16 w-6 h-6 rounded-full bg-white/[0.04]"></div>
+            <Rocket class="w-20 h-20 xl:w-24 xl:h-24 text-primary -rotate-45" style="filter: drop-shadow(0 0 24px hsl(var(--primary) / 0.4))" />
+          </div>
+          <div class="absolute -top-6 left-8 w-2 h-2 rounded-full bg-primary/50 animate-pulse"></div>
+          <div class="absolute top-12 -right-8 w-1.5 h-1.5 rounded-full bg-accent/50 animate-pulse" style="animation-delay: 0.5s"></div>
+          <div class="absolute -bottom-4 left-20 w-1 h-1 rounded-full bg-primary/40 animate-pulse" style="animation-delay: 1s"></div>
+        </div>
       </div>
 
       <div class="text-xs text-muted-foreground">
@@ -281,7 +286,7 @@ function switchMode(newMode: 'join' | 'create') {
               <FormField label="组织名称" :error="errors.orgName" required hint="您的团队或公司名称">
                 <BaseInput
                   :model-value="form.orgName"
-                  placeholder="例如：神笔科技"
+                  placeholder="例如：赛托邦科技"
                   :error="!!errors.orgName"
                   autocomplete="organization"
                   @update:model-value="onOrgNameInput"
@@ -290,7 +295,7 @@ function switchMode(newMode: 'join' | 'create') {
               <FormField label="组织标识" :error="errors.orgSlug" required hint="用于登录的唯一标识">
                 <BaseInput
                   v-model="form.orgSlug"
-                  placeholder="例如：shenbi-tech"
+                  placeholder="例如：cytopia-tech"
                   :error="!!errors.orgSlug"
                   @input="errors.orgSlug = ''"
                 />
@@ -301,7 +306,7 @@ function switchMode(newMode: 'join' | 'create') {
               <FormField label="组织标识" :error="errors.tenantSlug" required hint="由管理员提供的团队标识">
                 <BaseInput
                   v-model="form.tenantSlug"
-                  placeholder="例如：shenbi-team"
+                  placeholder="例如：cytopia"
                   :error="!!errors.tenantSlug"
                   autocomplete="organization"
                   @input="errors.tenantSlug = ''"

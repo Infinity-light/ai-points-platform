@@ -80,7 +80,7 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
         <FormField label="项目名称" :error="errors.name" required>
           <BaseInput
             v-model="form.name"
-            placeholder="例如：神笔 2026 Q2"
+            placeholder="例如：2026 Q2 项目"
             :error="!!errors.name"
             @input="errors.name = ''"
           />
