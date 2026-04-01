@@ -111,12 +111,17 @@ router.beforeEach(async (to, _from, next) => {
   } else if (to.meta.guestOnly && token) {
     next({ name: 'Dashboard' });
   } else {
-    // Ensure user data is loaded when authenticated
+    // Ensure user data and permissions are loaded when authenticated
     if (token) {
       const { useAuthStore } = await import('@/stores/auth');
       const authStore = useAuthStore();
       if (!authStore.userLoaded) {
         await authStore.fetchUser();
+      }
+      const { usePermissionStore } = await import('@/stores/permission');
+      const permissionStore = usePermissionStore();
+      if (!permissionStore.loaded) {
+        await permissionStore.fetchPermissions();
       }
     }
     next();
