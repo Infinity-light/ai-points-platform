@@ -1,5 +1,5 @@
 import { Processor, Process, OnQueueFailed, OnQueueCompleted } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger, forwardRef } from '@nestjs/common';
 import type { Job } from 'bull';
 import { QUEUE_NAMES } from '../queue.constants';
 import { AuctionService } from '../../auction/auction.service';
@@ -14,7 +14,10 @@ export interface AuctionCloseJobData {
 export class AuctionCloseProcessor {
   private readonly logger = new Logger(AuctionCloseProcessor.name);
 
-  constructor(private readonly auctionService: AuctionService) {}
+  constructor(
+    @Inject(forwardRef(() => AuctionService))
+    private readonly auctionService: AuctionService,
+  ) {}
 
   @Process(AUCTION_CLOSE_JOB)
   async handleAutoClose(job: Job<AuctionCloseJobData>): Promise<void> {
