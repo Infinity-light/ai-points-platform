@@ -2,9 +2,6 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class GovernanceUpgrade1700000000018 implements MigrationInterface {
   name = 'GovernanceUpgrade1700000000018';
-  // Disable TypeORM's automatic transaction wrapping — we manage transactions manually
-  // because ALTER TYPE ADD VALUE cannot run inside a transaction in PostgreSQL
-  public transaction = false as const;
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.startTransaction();
@@ -323,11 +320,14 @@ export class GovernanceUpgrade1700000000018 implements MigrationInterface {
       await queryRunner.query(`CREATE INDEX "IDX_bids_auctionId" ON "bids" ("auctionId")`);
       await queryRunner.query(`CREATE INDEX "IDX_bids_userId_tenantId" ON "bids" ("userId", "tenantId")`);
 
-      // 16. 为 task_status_enum 添加 pending_review 值
-      // PostgreSQL 不支持在事务中 ALTER TYPE ADD VALUE，需要在事务外处理
-      // 使用 ALTER TABLE 列类型临时转换方案：先改为 varchar，后改回来（但这复杂）
-      // 正确做法：在 commitTransaction 后再 ALTER TYPE
-      // 因此这一步会在事务提交后执行
+      // 16. 添加 pending_review 到 task status enum
+      // PostgreSQL 不支持在事务中 ALTER TYPE ADD VALUE
+      // 方案：先转为 varchar → 更新数据 → 重建 enum（含新值）→ 转回 enum
+      await queryRunner.query(`ALTER TABLE "tasks" ALTER COLUMN "status" TYPE character varying(30)`);
+      await queryRunner.query(`UPDATE "tasks" SET "status" = 'pending_review' WHERE "status" = 'pending_vote'`);
+      await queryRunner.query(`DROP TYPE IF EXISTS "tasks_status_enum"`);
+      await queryRunner.query(`CREATE TYPE "tasks_status_enum" AS ENUM ('open', 'claimed', 'submitted', 'ai_reviewing', 'pending_review', 'pending_vote', 'settled', 'cancelled')`);
+      await queryRunner.query(`ALTER TABLE "tasks" ALTER COLUMN "status" TYPE "tasks_status_enum" USING "status"::"tasks_status_enum"`);
 
       // 17. 为 tasks 添加 claimMode 列
       await queryRunner.query(`
@@ -340,24 +340,6 @@ export class GovernanceUpgrade1700000000018 implements MigrationInterface {
       await queryRunner.rollbackTransaction();
       throw err;
     }
-
-    // 16. ALTER TYPE ADD VALUE 必须在事务外执行
-    // 检查是否已存在 pending_review 值
-    const existingValues = await queryRunner.query(`
-      SELECT enumlabel FROM pg_enum
-      JOIN pg_type ON pg_type.oid = pg_enum.enumtypid
-      WHERE pg_type.typname = 'tasks_status_enum'
-      AND pg_enum.enumlabel = 'pending_review'
-    `);
-    if (existingValues.length === 0) {
-      await queryRunner.query(`ALTER TYPE "tasks_status_enum" ADD VALUE 'pending_review'`);
-    }
-
-    // 18. 将 pending_vote → pending_review
-    // 注意：pending_vote 已存在于 enum 中，先添加 pending_review 后再迁移数据
-    await queryRunner.query(`
-      UPDATE "tasks" SET "status" = 'pending_review' WHERE "status" = 'pending_vote'
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
