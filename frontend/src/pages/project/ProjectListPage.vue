@@ -13,8 +13,13 @@ const error = ref('');
 async function loadProjects() {
   try {
     const res = await projectApi.list(true);
-    projects.value = res.data;
-  } catch {
+    projects.value = res.data ?? [];
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 401 || status === 403) {
+      // Token invalid or no permission — will be handled by axios interceptor / router guard
+      return;
+    }
     error.value = '加载项目失败，请刷新重试';
   } finally {
     loading.value = false;

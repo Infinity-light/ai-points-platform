@@ -12,8 +12,10 @@ const projectPoints = ref<MyProjectPoints[]>([]);
 onMounted(async () => {
   try {
     const res = await pointsApi.getMyProjects();
-    projectPoints.value = res.data;
-  } catch {
+    projectPoints.value = res.data ?? [];
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 401 || status === 403) return;
     error.value = '加载工分数据失败，请刷新重试';
   } finally {
     loading.value = false;
@@ -27,7 +29,7 @@ const totalActive = computed(() =>
   projectPoints.value.reduce((sum, p) => sum + p.activeTotal, 0),
 );
 const annealingRatio = computed(() =>
-  totalOriginal.value > 0 ? totalActive.value / totalOriginal.value : 1,
+  totalOriginal.value > 0 ? totalActive.value / totalOriginal.value : 0,
 );
 
 const roleLabels: Record<string, string> = {
@@ -90,7 +92,7 @@ const roleLabels: Record<string, string> = {
       </div>
 
       <!-- Annealing visualization -->
-      <div class="glass-card p-5 mb-6">
+      <div v-if="totalOriginal > 0" class="glass-card p-5 mb-6">
         <div class="flex items-center justify-between mb-3">
           <h2 class="font-heading font-semibold text-foreground">工分活跃度</h2>
           <span class="text-sm font-mono text-muted-foreground">

@@ -40,7 +40,15 @@
           <p class="text-xs text-muted-foreground truncate">{{ authStore.user.email }}</p>
         </div>
         <button
-          class="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          class="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-200 cursor-pointer"
+          @click="themeStore.toggle()"
+        >
+          <Sun v-if="themeStore.theme === 'dark'" class="w-[18px] h-[18px] shrink-0" />
+          <Moon v-else class="w-[18px] h-[18px] shrink-0" />
+          <span>{{ themeStore.theme === 'dark' ? '浅色模式' : '深色模式' }}</span>
+        </button>
+        <button
+          class="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-200 cursor-pointer"
           @click="handleLogout"
         >
           <LogOut class="w-[18px] h-[18px] shrink-0" />
@@ -61,6 +69,7 @@ import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { usePermissionStore } from '@/stores/permission';
+import { useThemeStore } from '@/stores/theme';
 import SpaceBackground from '@/components/SpaceBackground.vue';
 import {
   LayoutDashboard,
@@ -73,12 +82,15 @@ import {
   Rocket,
   BarChart3,
   Gavel,
+  Sun,
+  Moon,
 } from 'lucide-vue-next';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const permissionStore = usePermissionStore();
+const themeStore = useThemeStore();
 
 const isAdminVisible = computed(
   () =>

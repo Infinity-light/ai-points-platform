@@ -137,15 +137,20 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
         </div>
 
         <div v-else class="space-y-1.5">
-          <label class="text-sm font-medium text-foreground">每月第 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 天</label>
-          <input
-            type="range"
-            v-model.number="form.dayOfMonth"
-            min="1" max="28"
-            class="w-full accent-primary"
-          />
-          <div class="flex justify-between text-xs text-muted-foreground">
-            <span>1日</span><span>28日</span>
+          <label class="text-sm font-medium text-foreground">结算日：每月 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 日</label>
+          <div class="grid grid-cols-7 gap-1.5">
+            <button
+              v-for="d in 28"
+              :key="d"
+              type="button"
+              class="w-full aspect-square rounded-md text-xs font-mono transition-colors duration-150 cursor-pointer"
+              :class="form.dayOfMonth === d
+                ? 'bg-primary text-primary-foreground font-bold'
+                : 'border border-border hover:bg-white/5 text-muted-foreground hover:text-foreground'"
+              @click="form.dayOfMonth = d"
+            >
+              {{ d }}
+            </button>
           </div>
         </div>
       </div>

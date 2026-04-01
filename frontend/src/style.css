@@ -4,6 +4,37 @@
 
 @layer base {
   :root {
+    /* Cytopia — Light Theme */
+    --background: 220 20% 97%;
+    --foreground: 224 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 30% 15%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 93%;
+    --secondary-foreground: 224 25% 25%;
+    --muted: 220 16% 93%;
+    --muted-foreground: 215 15% 47%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 239 84% 67%;
+    --radius: 0.5rem;
+
+    /* Cytopia brand tokens */
+    --lunar-silver: 220 16% 45%;
+    --glow-primary: 0 0 20px rgba(99, 102, 241, 0.15);
+    --glow-silver: 0 0 20px rgba(100, 110, 130, 0.1);
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+  }
+
+  .dark {
     /* Lunar Enterprise — Deep Space Dark Theme */
     --background: 222 47% 5%;
     --foreground: 210 40% 96%;
@@ -24,9 +55,7 @@
     --border: 224 20% 18%;
     --input: 224 20% 18%;
     --ring: 239 84% 67%;
-    --radius: 0.5rem;
 
-    /* Cytopia brand tokens */
     --lunar-silver: 220 16% 80%;
     --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
     --glow-silver: 0 0 20px rgba(192, 199, 214, 0.15);
@@ -52,7 +81,11 @@
 
 @layer components {
   .glass-card {
-    @apply bg-card/60 border border-border/50 rounded-lg;
+    @apply bg-card border border-border/50 rounded-lg;
+  }
+
+  .dark .glass-card {
+    @apply bg-card/60;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -67,7 +100,11 @@
   }
 
   .glass-sidebar {
-    @apply bg-card/80 border-r border-border/50;
+    @apply bg-card border-r border-border/50;
+  }
+
+  .dark .glass-sidebar {
+    @apply bg-card/80;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
   }

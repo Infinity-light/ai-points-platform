@@ -14,6 +14,11 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+:root:not(.dark) .space-bg {
+  opacity: 0;
 }
 
 .space-bg__gradient {

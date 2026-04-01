@@ -9,4 +9,9 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
+
+// Initialize theme before mount to prevent flash
+import { useThemeStore } from '@/stores/theme';
+useThemeStore();
+
 app.mount('#app');
