@@ -2,6 +2,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class GovernanceUpgrade1700000000018 implements MigrationInterface {
   name = 'GovernanceUpgrade1700000000018';
+  // Disable TypeORM's automatic transaction wrapping — we manage transactions manually
+  // because ALTER TYPE ADD VALUE cannot run inside a transaction in PostgreSQL
+  public transaction = false as const;
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.startTransaction();
