@@ -330,6 +330,138 @@ export class SettlementService {
     return savedSettlement;
   }
 
+  /**
+   * Manual project-level settlement.
+   * Finds all completed meetings with unprocessed results for this project
+   * and settles them. If no settlable work exists, throws BadRequestException.
+   */
+  async settleProject(
+    projectId: string,
+    tenantId: string,
+    triggeredBy: string,
+  ): Promise<Settlement> {
+    // Find meetings with results that haven't been settled yet
+    const meetings = await this.meetingRepository.find({
+      where: { projectId, tenantId, status: 'closed' as const },
+      order: { closedAt: 'DESC' },
+    });
+
+    // Collect all task IDs from meeting results that are not yet settled
+    const pendingTaskIds: Array<{ taskId: string; finalScore: number; meetingId: string }> = [];
+    for (const meeting of meetings) {
+      if (!meeting.results) continue;
+      for (const [taskId, result] of Object.entries(meeting.results)) {
+        if (!result) continue;
+        try {
+          const task = await this.taskService.findOne(taskId, tenantId);
+          if (task.status !== 'settled') {
+            pendingTaskIds.push({
+              taskId,
+              finalScore: (result as { finalScore: number }).finalScore,
+              meetingId: meeting.id,
+            });
+          }
+        } catch {
+          // Task not found or inaccessible — skip
+        }
+      }
+    }
+
+    if (pendingTaskIds.length === 0) {
+      throw new BadRequestException('当前没有待结算的内容');
+    }
+
+    // Increment round
+    const project = await this.projectService.incrementSettlementRound(projectId, tenantId);
+    const newRound = project.settlementRound;
+
+    const settledTaskIds: string[] = [];
+    let totalPointsAwarded = 0;
+    const affectedUsers = new Set<string>();
+
+    for (const { taskId, finalScore, meetingId } of pendingTaskIds) {
+      try {
+        const task = await this.taskService.findOne(taskId, tenantId);
+        const estimatedPoints = task.estimatedPoints ?? task.metadata?.estimatedPoints ?? 10;
+        const qualityRatio = finalScore / 15;
+        const finalPoints = Math.max(1, Math.round(Number(estimatedPoints) * qualityRatio));
+
+        // Check contributions for multi-person split
+        const contributions = await this.contributionRepository.find({
+          where: { taskId, tenantId },
+        });
+
+        if (contributions.length > 0) {
+          for (const contrib of contributions) {
+            const userPoints = Math.max(
+              1,
+              Math.round(finalPoints * Number(contrib.percentage) / 100),
+            );
+            await this.pointsService.awardPoints(
+              tenantId, contrib.userId, project.id, userPoints,
+              newRound, taskId, meetingId, PoolStatus.PROJECT_ONLY,
+            );
+            totalPointsAwarded += userPoints;
+            affectedUsers.add(contrib.userId);
+          }
+        } else if (task.assigneeId) {
+          await this.pointsService.awardPoints(
+            tenantId, task.assigneeId, project.id, finalPoints,
+            newRound, taskId, meetingId, PoolStatus.PROJECT_ONLY,
+          );
+          totalPointsAwarded += finalPoints;
+          affectedUsers.add(task.assigneeId);
+        }
+
+        await this.taskService.settle(taskId, tenantId, finalPoints);
+        settledTaskIds.push(taskId);
+      } catch (err) {
+        console.error(`Failed to settle task ${taskId}:`, err);
+      }
+    }
+
+    const settlement = this.settlementRepository.create({
+      tenantId,
+      projectId: project.id,
+      roundNumber: newRound,
+      triggeredBy,
+      settledTaskIds,
+      summary: { totalPointsAwarded, usersAffected: affectedUsers.size },
+    });
+    const savedSettlement = await this.settlementRepository.save(settlement);
+
+    // Create snapshots + dividend draft (non-fatal)
+    try {
+      const members = await this.projectService.getMembers(project.id, tenantId);
+      const memberUserIds = members.map((m) => m.userId);
+      const users = memberUserIds.length > 0
+        ? await this.userRepository.find({ where: { id: In(memberUserIds), tenantId } })
+        : [];
+      const userNames = new Map(users.map((u) => [u.id, u.name]));
+      const memberActivePoints = await this.pointsService.getAllMembersActivePoints(
+        tenantId, project.id, memberUserIds, newRound,
+        project.annealingConfig.cyclesPerStep, project.annealingConfig.maxSteps,
+      );
+      const sorted = [...memberActivePoints.entries()].sort((a, b) => b[1] - a[1]);
+      const snapshots = sorted.map(([userId, activePoints], index) =>
+        this.snapshotRepository.create({
+          tenantId, projectId: project.id, settlementId: savedSettlement.id,
+          userId, userName: userNames.get(userId) ?? '',
+          rawPoints: 0, activePoints, rank: index + 1,
+        }),
+      );
+      await this.snapshotRepository.save(snapshots);
+      await this.dividendService.createDraft({
+        tenantId, projectId: project.id, settlementId: savedSettlement.id,
+        roundNumber: newRound, memberActivePoints, userNames,
+      });
+    } catch (err) {
+      console.error('Failed to create post-settlement snapshot/dividend draft:', err);
+    }
+
+    return savedSettlement;
+  }
+
   async findForProject(tenantId: string, projectId: string): Promise<Settlement[]> {
     return this.settlementRepository.find({
       where: { tenantId, projectId },

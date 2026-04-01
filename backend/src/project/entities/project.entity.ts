@@ -18,9 +18,16 @@ export interface AnnealingConfig {
 }
 
 export interface SettlementConfig {
-  periodType: 'weekly' | 'monthly';
-  dayOfWeek?: number;   // 0-6, 仅 weekly
-  dayOfMonth?: number;  // 1-28, 仅 monthly
+  mode: 'manual' | 'reminder' | 'auto';
+  schedule?: {
+    periodType: 'weekly' | 'monthly';
+    dayOfWeek?: number;   // 0-6, 仅 weekly
+    dayOfMonth?: number;  // 1-28, 仅 monthly
+  };
+  // Legacy fields — kept for backward compatibility during migration
+  periodType?: 'weekly' | 'monthly';
+  dayOfWeek?: number;
+  dayOfMonth?: number;
 }
 
 @Entity('projects')
@@ -45,7 +52,7 @@ export class Project {
   @Column({ type: 'jsonb', default: { cyclesPerStep: 3, maxSteps: 4 } })
   annealingConfig!: AnnealingConfig;
 
-  @Column({ type: 'jsonb', default: { periodType: 'weekly', dayOfWeek: 1 } })
+  @Column({ type: 'jsonb', default: { mode: 'manual' } })
   settlementConfig!: SettlementConfig;
 
   @Column('uuid')

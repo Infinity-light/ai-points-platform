@@ -35,6 +35,12 @@ export class SettlementController {
     return this.settlementService.triggerSettlement(dto.voteSessionId, req.user.tenantId, req.user.sub);
   }
 
+  @Post('project/:projectId/settle')
+  @CheckPolicies('settlements', 'trigger')
+  settleProject(@Param('projectId') projectId: string, @Request() req: RequestWithUser) {
+    return this.settlementService.settleProject(projectId, req.user.tenantId, req.user.sub);
+  }
+
   @Get('project/:projectId')
   @CheckPolicies('settlements', 'read')
   findForProject(@Param('projectId') projectId: string, @Request() req: RequestWithUser) {

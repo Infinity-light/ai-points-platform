@@ -21,7 +21,7 @@ export class ProjectService {
 
   async create(tenantId: string, createdBy: string, dto: CreateProjectDto): Promise<Project> {
     const defaults: AnnealingConfig = { cyclesPerStep: 3, maxSteps: 9 };
-    const settlementDefaults: SettlementConfig = { periodType: 'weekly', dayOfWeek: 1 };
+    const settlementDefaults: SettlementConfig = { mode: 'manual' };
 
     const project = this.projectRepository.create({
       tenantId,
@@ -75,7 +75,10 @@ export class ProjectService {
       project.annealingConfig = { ...project.annealingConfig, ...dto.annealingConfig };
     }
     if (dto.settlementConfig) {
-      project.settlementConfig = { ...project.settlementConfig, ...dto.settlementConfig };
+      project.settlementConfig = {
+        ...project.settlementConfig,
+        ...dto.settlementConfig,
+      } as SettlementConfig;
     }
     if (dto.name !== undefined) project.name = dto.name;
     if (dto.description !== undefined) project.description = dto.description ?? null;

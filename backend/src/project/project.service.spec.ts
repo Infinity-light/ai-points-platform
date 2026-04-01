@@ -12,7 +12,7 @@ const mockProject: Project = {
   description: null,
   status: ProjectStatus.ACTIVE,
   annealingConfig: { cyclesPerStep: 3, maxSteps: 9 },
-  settlementConfig: { periodType: 'weekly', dayOfWeek: 1 },
+  settlementConfig: { mode: 'manual' },
   createdBy: 'user-uuid',
   settlementRound: 0,
   createdAt: new Date(),

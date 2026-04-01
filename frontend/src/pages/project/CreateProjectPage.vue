@@ -14,6 +14,7 @@ const globalError = ref('');
 const form = reactive({
   name: '',
   description: '',
+  settlementMode: 'manual' as 'manual' | 'reminder' | 'auto',
   periodType: 'weekly' as 'weekly' | 'monthly',
   dayOfWeek: 1,
   dayOfMonth: 1,
@@ -37,9 +38,14 @@ async function handleSubmit() {
       name: form.name.trim(),
       description: form.description.trim() || undefined,
       annealingConfig: { cyclesPerStep: form.cyclesPerStep, maxSteps: form.maxSteps },
-      settlementConfig: form.periodType === 'weekly'
-        ? { periodType: 'weekly' as const, dayOfWeek: form.dayOfWeek }
-        : { periodType: 'monthly' as const, dayOfMonth: form.dayOfMonth },
+      settlementConfig: {
+        mode: form.settlementMode,
+        ...(form.settlementMode !== 'manual' && {
+          schedule: form.periodType === 'weekly'
+            ? { periodType: 'weekly' as const, dayOfWeek: form.dayOfWeek }
+            : { periodType: 'monthly' as const, dayOfMonth: form.dayOfMonth },
+        }),
+      },
     };
     const res = await projectApi.create(payload);
     await router.push(`/projects/${res.data.id}`);
@@ -98,61 +104,93 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
 
       <!-- 结算配置 -->
       <div class="glass-card p-5 space-y-4">
-        <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">结算周期</h2>
+        <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">结算模式</h2>
 
         <div class="flex gap-3">
           <label
-            v-for="opt in [{ value: 'weekly', label: '每周结算' }, { value: 'monthly', label: '每月结算' }]"
+            v-for="opt in [
+              { value: 'manual', label: '手动结算', desc: '负责人按需触发' },
+              { value: 'reminder', label: '提醒结算', desc: '定期提醒，手动确认' },
+              { value: 'auto', label: '自动结算', desc: '到期自动执行' },
+            ]"
             :key="opt.value"
-            class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200"
-            :class="form.periodType === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:bg-white/5'"
+            class="flex-1 flex flex-col gap-1 px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200"
+            :class="form.settlementMode === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary/50'"
           >
-            <input type="radio" :value="opt.value" v-model="form.periodType" class="sr-only" />
-            <div
-              class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200"
-              :class="form.periodType === opt.value ? 'border-primary' : 'border-border'"
-            >
-              <div v-if="form.periodType === opt.value" class="w-2 h-2 rounded-full bg-primary" />
+            <input type="radio" :value="opt.value" v-model="form.settlementMode" class="sr-only" />
+            <div class="flex items-center gap-2">
+              <div
+                class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200"
+                :class="form.settlementMode === opt.value ? 'border-primary' : 'border-border'"
+              >
+                <div v-if="form.settlementMode === opt.value" class="w-2 h-2 rounded-full bg-primary" />
+              </div>
+              <span class="text-sm font-medium">{{ opt.label }}</span>
             </div>
-            <span class="text-sm font-medium">{{ opt.label }}</span>
+            <span class="text-xs text-muted-foreground ml-6">{{ opt.desc }}</span>
           </label>
         </div>
 
-        <div v-if="form.periodType === 'weekly'" class="space-y-1.5">
-          <label class="text-sm font-medium text-foreground">结算日</label>
-          <div class="flex gap-1.5 flex-wrap">
-            <button
-              v-for="(day, i) in weekdays"
-              :key="i"
-              type="button"
-              class="px-3 py-1.5 text-xs rounded-md border transition-colors duration-200 cursor-pointer"
-              :class="form.dayOfWeek === i
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border hover:bg-white/5'"
-              @click="form.dayOfWeek = i"
-            >
-              {{ day }}
-            </button>
-          </div>
+        <div v-if="form.settlementMode === 'manual'" class="bg-secondary/50 rounded-lg p-3 text-xs text-muted-foreground">
+          项目负责人可随时在项目详情页点击"发起结算"。结算轮次仅在实际结算时推进，不会空转退火。
         </div>
 
-        <div v-else class="space-y-1.5">
-          <label class="text-sm font-medium text-foreground">结算日：每月 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 日</label>
-          <div class="grid grid-cols-7 gap-1.5">
-            <button
-              v-for="d in 28"
-              :key="d"
-              type="button"
-              class="w-full aspect-square rounded-md text-xs font-mono transition-colors duration-150 cursor-pointer"
-              :class="form.dayOfMonth === d
-                ? 'bg-primary text-primary-foreground font-bold'
-                : 'border border-border hover:bg-white/5 text-muted-foreground hover:text-foreground'"
-              @click="form.dayOfMonth = d"
+        <!-- 定期配置（仅 reminder / auto 模式） -->
+        <template v-if="form.settlementMode !== 'manual'">
+          <div class="flex gap-3">
+            <label
+              v-for="opt in [{ value: 'weekly', label: '每周' }, { value: 'monthly', label: '每月' }]"
+              :key="opt.value"
+              class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200"
+              :class="form.periodType === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary/50'"
             >
-              {{ d }}
-            </button>
+              <input type="radio" :value="opt.value" v-model="form.periodType" class="sr-only" />
+              <div
+                class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200"
+                :class="form.periodType === opt.value ? 'border-primary' : 'border-border'"
+              >
+                <div v-if="form.periodType === opt.value" class="w-2 h-2 rounded-full bg-primary" />
+              </div>
+              <span class="text-sm font-medium">{{ opt.label }}</span>
+            </label>
           </div>
-        </div>
+
+          <div v-if="form.periodType === 'weekly'" class="space-y-1.5">
+            <label class="text-sm font-medium text-foreground">结算日</label>
+            <div class="flex gap-1.5 flex-wrap">
+              <button
+                v-for="(day, i) in weekdays"
+                :key="i"
+                type="button"
+                class="px-3 py-1.5 text-xs rounded-md border transition-colors duration-200 cursor-pointer"
+                :class="form.dayOfWeek === i
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border hover:bg-secondary/50'"
+                @click="form.dayOfWeek = i"
+              >
+                {{ day }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="space-y-1.5">
+            <label class="text-sm font-medium text-foreground">结算日：每月 <span class="text-primary font-mono font-bold">{{ form.dayOfMonth }}</span> 日</label>
+            <div class="grid grid-cols-7 gap-1.5">
+              <button
+                v-for="d in 28"
+                :key="d"
+                type="button"
+                class="w-full aspect-square rounded-md text-xs font-mono transition-colors duration-150 cursor-pointer"
+                :class="form.dayOfMonth === d
+                  ? 'bg-primary text-primary-foreground font-bold'
+                  : 'border border-border hover:bg-secondary/50 text-muted-foreground hover:text-foreground'"
+                @click="form.dayOfMonth = d"
+              >
+                {{ d }}
+              </button>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- 退火配置 -->

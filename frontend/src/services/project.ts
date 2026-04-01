@@ -4,7 +4,10 @@ export interface CreateProjectPayload {
   name: string;
   description?: string;
   annealingConfig?: { cyclesPerStep?: number; maxSteps?: number };
-  settlementConfig?: { periodType?: 'weekly' | 'monthly'; dayOfWeek?: number; dayOfMonth?: number };
+  settlementConfig?: {
+    mode?: 'manual' | 'reminder' | 'auto';
+    schedule?: { periodType?: 'weekly' | 'monthly'; dayOfWeek?: number; dayOfMonth?: number };
+  };
 }
 
 export interface Project {
@@ -14,7 +17,10 @@ export interface Project {
   description: string | null;
   status: 'active' | 'archived';
   annealingConfig: { cyclesPerStep: number; maxSteps: number };
-  settlementConfig: { periodType: 'weekly' | 'monthly'; dayOfWeek?: number; dayOfMonth?: number };
+  settlementConfig: {
+    mode: 'manual' | 'reminder' | 'auto';
+    schedule?: { periodType: 'weekly' | 'monthly'; dayOfWeek?: number; dayOfMonth?: number };
+  };
   createdBy: string;
   settlementRound: number;
   createdAt: string;
@@ -38,4 +44,5 @@ export const projectApi = {
   getMembers: (id: string) => api.get<ProjectMember[]>(`/projects/${id}/members`),
   addMember: (id: string, userId: string) => api.post<ProjectMember>(`/projects/${id}/members`, { userId }),
   removeMember: (id: string, userId: string) => api.delete(`/projects/${id}/members/${userId}`),
+  settle: (id: string) => api.post(`/settlements/project/${id}/settle`),
 };

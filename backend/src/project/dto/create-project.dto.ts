@@ -9,7 +9,28 @@ class AnnealingConfigDto {
   maxSteps?: number;
 }
 
+class ScheduleConfigDto {
+  @IsOptional()
+  periodType?: 'weekly' | 'monthly';
+
+  @IsOptional()
+  dayOfWeek?: number;
+
+  @IsOptional()
+  dayOfMonth?: number;
+}
+
 class SettlementConfigDto {
+  @IsOptional()
+  mode?: 'manual' | 'reminder' | 'auto';
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ScheduleConfigDto)
+  schedule?: ScheduleConfigDto;
+
+  // Legacy fields for backward compatibility
   @IsOptional()
   periodType?: 'weekly' | 'monthly';
 
