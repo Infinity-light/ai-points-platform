@@ -33,7 +33,7 @@ export class AiProviderKey {
   @Column({ type: 'text' })
   encryptedKey!: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   model!: string | null;
 
   @Column({ default: true })
