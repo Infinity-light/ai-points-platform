@@ -72,6 +72,45 @@ export interface FeishuEnabledResponse {
   enabled: boolean;
 }
 
+// Device Flow types
+export interface DeviceFlowBeginResponse {
+  available: boolean;
+  verificationUri?: string;
+  deviceCode?: string;
+  expiresIn?: number;
+}
+
+export interface DeviceFlowPollResponse {
+  status: 'pending' | 'completed' | 'expired' | 'error';
+  clientId?: string;
+  clientSecret?: string;
+  message?: string;
+  config?: FeishuConfig;
+}
+
+// Auto Config types
+export interface AutoConfigStepResult {
+  step: string;
+  success: boolean;
+  message?: string;
+}
+
+export interface AutoConfigResult {
+  results: AutoConfigStepResult[];
+  allSuccess: boolean;
+}
+
+export interface ScopeStatus {
+  scope: string;
+  description: string;
+  granted: boolean;
+}
+
+export interface CheckScopesResponse {
+  scopes: ScopeStatus[];
+  requiredScopes: string[];
+}
+
 export const feishuConfigApi = {
   getConfig: (): Promise<FeishuConfig> =>
     api.get<FeishuConfig>('/feishu-config').then((r) => r.data),
@@ -102,4 +141,18 @@ export const feishuConfigApi = {
 
   listRoles: (): Promise<RoleDto[]> =>
     api.get<RoleDto[]>('/rbac/roles').then((r) => r.data),
+
+  // Device Flow
+  beginDeviceFlow: (): Promise<DeviceFlowBeginResponse> =>
+    api.post<DeviceFlowBeginResponse>('/feishu-config/device-flow/begin').then((r) => r.data),
+
+  pollDeviceFlow: (deviceCode: string): Promise<DeviceFlowPollResponse> =>
+    api.post<DeviceFlowPollResponse>('/feishu-config/device-flow/poll', { deviceCode }).then((r) => r.data),
+
+  // Auto Configuration
+  autoConfigure: (): Promise<AutoConfigResult> =>
+    api.post<AutoConfigResult>('/feishu-config/auto-configure').then((r) => r.data),
+
+  checkScopes: (): Promise<CheckScopesResponse> =>
+    api.get<CheckScopesResponse>('/feishu-config/check-scopes').then((r) => r.data),
 };

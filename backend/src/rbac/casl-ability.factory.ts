@@ -27,6 +27,7 @@ export type AppResource =
   | 'audit'
   | 'bulletin'
   | 'auctions'
+  | 'feishu'
   | 'all';
 
 // 动作类型（字符串）

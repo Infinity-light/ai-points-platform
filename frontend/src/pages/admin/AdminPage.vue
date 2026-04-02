@@ -69,7 +69,7 @@ const allTabs: TabDef[] = [
   {
     key: 'feishu',
     label: '飞书集成',
-    permission: { resource: 'config', action: 'update' },
+    permission: { resource: 'feishu', action: 'manage' },
     component: defineAsyncComponent(() => import('./tabs/FeishuConfigTab.vue')),
   },
   {

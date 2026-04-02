@@ -10,6 +10,8 @@ import { FeishuClientService } from './feishu-client.service';
 import { FeishuConfigService } from './feishu-config.service';
 import { FeishuSyncService } from './feishu-sync.service';
 import { FeishuSyncProcessor } from './feishu-sync.processor';
+import { FeishuDeviceFlowService } from './feishu-device-flow.service';
+import { FeishuAutoConfigService } from './feishu-auto-config.service';
 import { FeishuConfigController } from './feishu-config.controller';
 import { FeishuWebhookController } from './feishu-webhook.controller';
 import { RbacModule } from '../rbac/rbac.module';
@@ -31,6 +33,8 @@ import { QUEUE_NAMES } from '../queue/queue.constants';
     FeishuConfigService,
     FeishuSyncService,
     FeishuSyncProcessor,
+    FeishuDeviceFlowService,
+    FeishuAutoConfigService,
   ],
   exports: [FeishuClientService, FeishuConfigService],
 })
