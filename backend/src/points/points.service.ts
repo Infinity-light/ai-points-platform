@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { PointRecord, PointSource, PoolStatus } from './entities/point-record.entity';
-import { PointApprovalBatch, PointApprovalBatchStatus } from './entities/point-approval-batch.entity';
 import { Project } from '../project/entities/project.entity';
 import { User } from '../user/entities/user.entity';
 import { ProjectService } from '../project/project.service';
@@ -38,8 +37,6 @@ export class PointsService {
   constructor(
     @InjectRepository(PointRecord)
     private readonly pointRepository: Repository<PointRecord>,
-    @InjectRepository(PointApprovalBatch)
-    private readonly batchRepository: Repository<PointApprovalBatch>,
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     @InjectRepository(User)
@@ -247,116 +244,7 @@ export class PointsService {
     return { rows, totalActive: totalActivePoints, totalOriginal: totalOriginalPoints };
   }
 
-  // T07: Approval batch methods
-
-  async createApprovalBatch(
-    tenantId: string,
-    projectId: string,
-    submittedBy: string,
-  ): Promise<PointApprovalBatch> {
-    const records = await this.pointRepository.find({
-      where: { tenantId, projectId, poolStatus: PoolStatus.PROJECT_ONLY },
-    });
-
-    if (records.length === 0) {
-      throw new NotFoundException('没有待审批的工分记录（project_only 状态）');
-    }
-
-    const totalPoints = records.reduce((sum, r) => sum + r.originalPoints, 0);
-    const pointRecordIds = records.map((r) => r.id);
-
-    const batch = this.batchRepository.create({
-      tenantId,
-      projectId,
-      submittedBy,
-      pointRecordIds,
-      totalPoints,
-      status: PointApprovalBatchStatus.PENDING,
-    });
-
-    const savedBatch = await this.batchRepository.save(batch);
-
-    // Update all records to pending_approval
-    await this.pointRepository
-      .createQueryBuilder()
-      .update(PointRecord)
-      .set({ poolStatus: PoolStatus.PENDING_APPROVAL })
-      .whereInIds(pointRecordIds)
-      .execute();
-
-    return savedBatch;
-  }
-
-  async getApprovalBatch(
-    id: string,
-    tenantId: string,
-  ): Promise<PointApprovalBatch & { records: PointRecord[] }> {
-    const batch = await this.batchRepository.findOne({ where: { id, tenantId } });
-    if (!batch) throw new NotFoundException(`审批批次 ${id} 不存在`);
-
-    const records = batch.pointRecordIds.length > 0
-      ? await this.pointRepository.find({ where: { id: In(batch.pointRecordIds), tenantId } })
-      : [];
-
-    return Object.assign(batch, { records });
-  }
-
-  async listPendingBatches(tenantId: string): Promise<PointApprovalBatch[]> {
-    return this.batchRepository.find({
-      where: { tenantId, status: PointApprovalBatchStatus.PENDING },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async approveBatch(
-    id: string,
-    tenantId: string,
-    reviewedBy: string,
-  ): Promise<PointApprovalBatch> {
-    const batch = await this.batchRepository.findOne({ where: { id, tenantId } });
-    if (!batch) throw new NotFoundException(`审批批次 ${id} 不存在`);
-
-    batch.status = PointApprovalBatchStatus.APPROVED;
-    batch.reviewedBy = reviewedBy;
-
-    if (batch.pointRecordIds.length > 0) {
-      await this.pointRepository
-        .createQueryBuilder()
-        .update(PointRecord)
-        .set({ poolStatus: PoolStatus.APPROVED })
-        .whereInIds(batch.pointRecordIds)
-        .execute();
-    }
-
-    return this.batchRepository.save(batch);
-  }
-
-  async rejectBatch(
-    id: string,
-    tenantId: string,
-    reviewedBy: string,
-    note?: string,
-  ): Promise<PointApprovalBatch> {
-    const batch = await this.batchRepository.findOne({ where: { id, tenantId } });
-    if (!batch) throw new NotFoundException(`审批批次 ${id} 不存在`);
-
-    batch.status = PointApprovalBatchStatus.REJECTED;
-    batch.reviewedBy = reviewedBy;
-    batch.reviewNote = note ?? null;
-
-    if (batch.pointRecordIds.length > 0) {
-      await this.pointRepository
-        .createQueryBuilder()
-        .update(PointRecord)
-        .set({ poolStatus: PoolStatus.PROJECT_ONLY })
-        .whereInIds(batch.pointRecordIds)
-        .execute();
-    }
-
-    return this.batchRepository.save(batch);
-  }
-
-  // T08: Profile points detail
+  // Profile points detail
 
   async getMyProjectsDetail(
     tenantId: string,

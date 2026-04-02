@@ -17,6 +17,7 @@ const mockTask: Task = {
   metadata: {},
   estimatedPoints: null,
   claimMode: 'single',
+  feishuRecordId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

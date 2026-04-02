@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Task } from './entities/task.entity';
 import { TaskStatus } from './enums/task-status.enum';
 import { validateTransition, getAllowedTransitions } from './task-state-machine';
@@ -41,6 +42,7 @@ export class TaskService {
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -59,7 +61,9 @@ export class TaskService {
       status: TaskStatus.OPEN,
       metadata: dto.metadata ?? {},
     });
-    return this.taskRepository.save(task);
+    const saved = await this.taskRepository.save(task);
+    this.eventEmitter.emit('task.created', { task: saved, tenantId });
+    return saved;
   }
 
   async findAll(tenantId: string, projectId: string): Promise<Task[]> {
@@ -83,7 +87,9 @@ export class TaskService {
     if (dto.metadata !== undefined) {
       task.metadata = { ...task.metadata, ...dto.metadata };
     }
-    return this.taskRepository.save(task);
+    const saved = await this.taskRepository.save(task);
+    this.eventEmitter.emit('task.updated', { task: saved, tenantId });
+    return saved;
   }
 
   /**

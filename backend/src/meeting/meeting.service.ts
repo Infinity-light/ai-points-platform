@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ReviewMeeting, MeetingTaskResult } from './entities/review-meeting.entity';
 import { ReviewVote } from './entities/review-vote.entity';
 import { TaskContribution } from './entities/task-contribution.entity';
@@ -52,6 +53,7 @@ export class MeetingService {
     private readonly contributionRepository: Repository<TaskContribution>,
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createMeeting(opts: {
@@ -205,7 +207,15 @@ export class MeetingService {
     meeting.closedAt = new Date();
     meeting.participantCount = participantSet.size;
 
-    return this.meetingRepository.save(meeting);
+    const saved = await this.meetingRepository.save(meeting);
+
+    this.eventEmitter.emit('meeting.closed', {
+      meetingId,
+      tenantId,
+      closedBy: opts.closedBy,
+    });
+
+    return saved;
   }
 
   async getMeeting(meetingId: string, tenantId: string): Promise<ReviewMeeting> {

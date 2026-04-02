@@ -18,7 +18,6 @@ import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { FeishuConfigService } from './feishu-config.service';
 import { FeishuSyncService } from './feishu-sync.service';
-import { FeishuDeviceFlowService } from './feishu-device-flow.service';
 import { FeishuAutoConfigService } from './feishu-auto-config.service';
 import { CreateFeishuConfigDto } from './dto/create-feishu-config.dto';
 import { CreateRoleMappingDto } from './dto/create-role-mapping.dto';
@@ -37,7 +36,6 @@ export class FeishuConfigController {
   constructor(
     private readonly feishuConfigService: FeishuConfigService,
     private readonly feishuSyncService: FeishuSyncService,
-    private readonly feishuDeviceFlowService: FeishuDeviceFlowService,
     private readonly feishuAutoConfigService: FeishuAutoConfigService,
     @InjectQueue(QUEUE_NAMES.FEISHU_SYNC)
     private readonly feishuSyncQueue: Queue,
@@ -131,44 +129,6 @@ export class FeishuConfigController {
       parseInt(page, 10),
       parseInt(limit, 10),
     );
-  }
-
-  // ─── Device Flow (one-click app creation) ──────────────────────────────────
-
-  @Post('device-flow/begin')
-  @HttpCode(HttpStatus.OK)
-  async beginDeviceFlow() {
-    return this.feishuDeviceFlowService.beginDeviceFlow();
-  }
-
-  @Post('device-flow/poll')
-  @HttpCode(HttpStatus.OK)
-  async pollDeviceFlow(
-    @Request() req: RequestWithUser,
-    @Body() body: { deviceCode: string },
-  ) {
-    const result = await this.feishuDeviceFlowService.pollDeviceFlow(body.deviceCode);
-
-    // Auto-save credentials on successful device flow completion
-    if (result.status === 'completed' && result.clientId && result.clientSecret) {
-      const baseUrl = this.configService.get<string>('feishu.callbackUrl')?.replace('/auth/feishu/callback', '') ?? '';
-      const config = await this.feishuConfigService.saveConfig(
-        req.user.tenantId,
-        { appId: result.clientId, appSecret: result.clientSecret, enabled: true },
-        baseUrl,
-      );
-      return {
-        ...result,
-        config: {
-          appId: config.appId,
-          enabled: config.enabled,
-          webhookUrl: this.feishuConfigService.getWebhookUrl(req.user.tenantId, baseUrl),
-          webhookVerifyToken: config.webhookVerifyToken,
-        },
-      };
-    }
-
-    return result;
   }
 
   // ─── Auto Configuration ────────────────────────────────────────────────────

@@ -84,6 +84,8 @@ import {
   Gavel,
   Sun,
   Moon,
+  MessageSquare,
+  Bot,
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -94,12 +96,21 @@ const themeStore = useThemeStore();
 
 const isAdminVisible = computed(
   () =>
-    !permissionStore.loaded ||
-    permissionStore.can('read', 'users') ||
-    permissionStore.can('read', 'roles') ||
-    permissionStore.can('read', 'tenants') ||
-    permissionStore.can('read', 'config') ||
-    permissionStore.can('read', 'audit'),
+    permissionStore.loaded && (
+      permissionStore.can('read', 'users') ||
+      permissionStore.can('read', 'roles') ||
+      permissionStore.can('read', 'tenants') ||
+      permissionStore.can('read', 'config') ||
+      permissionStore.can('read', 'audit')
+    ),
+);
+
+const isFeishuVisible = computed(
+  () => permissionStore.loaded && permissionStore.can('manage', 'feishu'),
+);
+
+const isAiConfigVisible = computed(
+  () => permissionStore.loaded && permissionStore.can('update', 'config'),
 );
 
 const navItems = computed(() => {
@@ -112,6 +123,12 @@ const navItems = computed(() => {
     { path: '/profile', label: '个人中心', icon: User },
     { path: '/notifications', label: '消息通知', icon: Bell },
   ];
+  if (isFeishuVisible.value) {
+    items.push({ path: '/feishu-config', label: '飞书集成', icon: MessageSquare });
+  }
+  if (isAiConfigVisible.value) {
+    items.push({ path: '/ai-config', label: 'AI 配置', icon: Bot });
+  }
   if (isAdminVisible.value) {
     items.push({ path: '/admin', label: '管理后台', icon: Settings });
   }

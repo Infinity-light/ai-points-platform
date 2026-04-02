@@ -61,7 +61,6 @@ interface PendingRegistration {
   name: string;
   phone?: string;
   tenantId?: string;
-  inviteCode?: string;
   verificationCode: string;
   mode: 'join' | 'create';
   orgName?: string;
@@ -115,7 +114,6 @@ export class AuthService {
       name: dto.name,
       phone: dto.phone,
       tenantId: tenant.id,
-      inviteCode: dto.inviteCode,
       verificationCode: code,
       mode: 'join',
     };
@@ -220,7 +218,6 @@ export class AuthService {
         passwordHash: pending.passwordHash,
         name: pending.name,
         phone: pending.phone,
-        inviteCode: pending.inviteCode,
       });
     }
 

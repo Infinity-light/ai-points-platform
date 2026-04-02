@@ -19,7 +19,6 @@ const pendingEmail = ref('');
 
 const form = reactive({
   tenantSlug: '',
-  inviteCode: '',
   orgName: '',
   orgSlug: '',
   name: '',
@@ -114,7 +113,6 @@ async function handleRegister() {
         password: form.password,
         name: form.name.trim(),
         ...(form.phone && { phone: form.phone }),
-        ...(form.inviteCode && { inviteCode: form.inviteCode.trim() }),
       });
     }
     pendingId.value = res.data.pendingId;
@@ -328,10 +326,6 @@ function switchMode(newMode: 'join' | 'create') {
 
             <FormField label="手机号" :error="errors.phone" hint="选填">
               <BaseInput v-model="form.phone" type="tel" placeholder="11位手机号" :error="!!errors.phone" autocomplete="tel" @input="errors.phone = ''" />
-            </FormField>
-
-            <FormField v-if="mode === 'join'" label="邀请码" hint="选填，由管理员提供">
-              <BaseInput v-model="form.inviteCode" placeholder="8位邀请码" autocomplete="off" />
             </FormField>
 
             <BaseButton type="submit" class="w-full" size="lg" :loading="loading">

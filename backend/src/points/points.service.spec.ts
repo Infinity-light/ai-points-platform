@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PointsService } from './points.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PointRecord, PointSource } from './entities/point-record.entity';
-import { PointApprovalBatch } from './entities/point-approval-batch.entity';
 import { Project } from '../project/entities/project.entity';
 import { User } from '../user/entities/user.entity';
 import { ProjectService } from '../project/project.service';
@@ -30,13 +29,6 @@ describe('PointsService', () => {
       find: jest.fn().mockResolvedValue([]),
     };
 
-    const mockBatchRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn(),
-    };
-
     const mockUserRepo = {
       find: jest.fn().mockResolvedValue([]),
     };
@@ -50,7 +42,6 @@ describe('PointsService', () => {
       providers: [
         PointsService,
         { provide: getRepositoryToken(PointRecord), useValue: pointRepo },
-        { provide: getRepositoryToken(PointApprovalBatch), useValue: mockBatchRepo },
         { provide: getRepositoryToken(Project), useValue: projectRepo },
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
         { provide: ProjectService, useValue: mockProjectService },

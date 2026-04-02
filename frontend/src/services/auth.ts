@@ -5,7 +5,6 @@ export interface RegisterPayload {
   password: string;
   name: string;
   phone?: string;
-  inviteCode?: string;
   tenantSlug: string;
 }
 

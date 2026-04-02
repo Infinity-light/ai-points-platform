@@ -16,6 +16,10 @@ export interface ReviewInput {
   taskDescription: string | null;
   submissionContent: string;
   submissionType: 'explore' | 'ai-exec' | 'manual';
+  /** 附件提取的文本内容 */
+  attachmentTexts?: string[];
+  /** commit diff 摘要 */
+  commitDiffSummary?: string;
 }
 
 const SCORING_PROMPT = `你是一个公平、客观的工作成果评审员。你将对一个任务提交进行三维度评分。
@@ -123,16 +127,28 @@ export class AiService {
       manual: '人工执行类工作（附件、文档、设计稿等）',
     }[input.submissionType];
 
-    return `任务标题：${input.taskTitle}
+    let message = `任务标题：${input.taskTitle}
 任务描述：${input.taskDescription ?? '（无描述）'}
 提交类型：${typeLabel}
 
 提交内容：
 ---
 ${input.submissionContent}
----
+---`;
 
-请对以上工作成果进行三维度评分，返回 JSON。`;
+    if (input.attachmentTexts && input.attachmentTexts.length > 0) {
+      message += '\n\n附件内容：';
+      for (let i = 0; i < input.attachmentTexts.length; i++) {
+        message += `\n--- 附件 ${i + 1} ---\n${input.attachmentTexts[i]}`;
+      }
+    }
+
+    if (input.commitDiffSummary) {
+      message += `\n\n代码变更摘要：\n---\n${input.commitDiffSummary}\n---`;
+    }
+
+    message += '\n\n请对以上工作成果进行三维度评分，返回 JSON。';
+    return message;
   }
 
   private async callLlmOnce(

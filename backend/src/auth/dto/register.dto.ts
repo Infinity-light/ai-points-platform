@@ -18,11 +18,6 @@ export class RegisterDto {
   @Matches(/^1[3-9]\d{9}$/, { message: '手机号格式不正确' })
   phone?: string;
 
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  inviteCode?: string;
-
   @IsString()
   @IsNotEmpty()
   tenantSlug!: string; // 通过 slug 识别租户（注册时指定加入哪个租户）

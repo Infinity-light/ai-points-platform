@@ -1,8 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
   Param,
   ParseUUIDPipe,
   UseGuards,
@@ -12,13 +10,6 @@ import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { PointsService } from './points.service';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { IsUUID, IsNotEmpty } from 'class-validator';
-
-class CreateApprovalBatchDto {
-  @IsUUID()
-  @IsNotEmpty()
-  projectId!: string;
-}
 
 interface RequestWithUser extends Request {
   user: JwtPayload;
@@ -50,12 +41,4 @@ export class PointsController {
     return this.pointsService.getProjectPointsTable(req.user.tenantId, projectId);
   }
 
-  @Post('approval-batch')
-  @CheckPolicies('points', 'approve')
-  createApprovalBatch(
-    @Body() dto: CreateApprovalBatchDto,
-    @Request() req: RequestWithUser,
-  ) {
-    return this.pointsService.createApprovalBatch(req.user.tenantId, dto.projectId, req.user.sub);
-  }
 }

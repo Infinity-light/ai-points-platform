@@ -78,12 +78,16 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
-        path: 'admin/hr',
-        redirect: '/admin',
+        path: 'feishu-config',
+        name: 'FeishuConfig',
+        component: () => import('@/pages/feishu/FeishuConfigPage.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'admin/super',
-        redirect: '/admin',
+        path: 'ai-config',
+        name: 'AiConfig',
+        component: () => import('@/pages/ai-config/AiConfigPage.vue'),
+        meta: { requiresAuth: true },
       },
       {
         path: 'bulletin',

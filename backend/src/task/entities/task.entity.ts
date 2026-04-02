@@ -68,6 +68,10 @@ export class Task {
   @Column({ type: 'varchar', length: 20, default: 'single' })
   claimMode!: 'single' | 'multi';
 
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  @Index()
+  feishuRecordId!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

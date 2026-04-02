@@ -25,18 +25,6 @@ const allTabs: TabDef[] = [
     component: defineAsyncComponent(() => import('./tabs/RolePermissionTab.vue')),
   },
   {
-    key: 'invites',
-    label: '邀请码管理',
-    permission: { resource: 'users', action: 'read' },
-    component: defineAsyncComponent(() => import('./tabs/InviteTab.vue')),
-  },
-  {
-    key: 'approvals',
-    label: '工分审批',
-    permission: { resource: 'points', action: 'approve' },
-    component: defineAsyncComponent(() => import('./tabs/ApprovalTab.vue')),
-  },
-  {
     key: 'tenants',
     label: '租户管理',
     permission: { resource: 'tenants', action: 'read' },
@@ -59,18 +47,6 @@ const allTabs: TabDef[] = [
     label: '公示区设置',
     permission: { resource: 'config', action: 'update' },
     component: defineAsyncComponent(() => import('./tabs/BulletinSettingsTab.vue')),
-  },
-  {
-    key: 'ai-config',
-    label: 'AI 配置',
-    permission: { resource: 'config', action: 'update' },
-    component: defineAsyncComponent(() => import('./tabs/AiConfigTab.vue')),
-  },
-  {
-    key: 'feishu',
-    label: '飞书集成',
-    permission: { resource: 'feishu', action: 'manage' },
-    component: defineAsyncComponent(() => import('./tabs/FeishuConfigTab.vue')),
   },
   {
     key: 'departments',

@@ -38,7 +38,6 @@ export class UserService {
       passwordHash,
       name: rest.name,
       phone: rest.phone ?? null,
-      inviteCodeUsed: rest.inviteCode ?? null,
       isEmailVerified: false,
     });
 
@@ -51,7 +50,6 @@ export class UserService {
     passwordHash: string;
     name: string;
     phone?: string;
-    inviteCode?: string;
   }): Promise<User> {
     const user = this.userRepository.create({
       tenantId: data.tenantId,
@@ -59,7 +57,6 @@ export class UserService {
       passwordHash: data.passwordHash,
       name: data.name,
       phone: data.phone ?? null,
-      inviteCodeUsed: data.inviteCode ?? null,
       isEmailVerified: true,
     });
     return this.userRepository.save(user);

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project, ProjectStatus, AnnealingConfig, SettlementConfig, FieldDef } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -18,6 +19,7 @@ export class ProjectService {
     private readonly projectRepository: Repository<Project>,
     @InjectRepository(ProjectMember)
     private readonly memberRepository: Repository<ProjectMember>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(tenantId: string, createdBy: string, dto: CreateProjectDto): Promise<Project> {
@@ -38,6 +40,13 @@ export class ProjectService {
 
     // 创建者自动成为成员
     await this.addMember(saved.id, tenantId, createdBy, true);
+
+    // 通知飞书集成模块（如已配置）自动创建 Bitable
+    this.eventEmitter.emit('project.created', {
+      projectId: saved.id,
+      tenantId,
+      projectName: saved.name,
+    });
 
     return saved;
   }

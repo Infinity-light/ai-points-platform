@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { projectApi, type Project } from '@/services/project';
 import { taskApi, submissionApi, type Task, type Submission } from '@/services/task';
-import { ChevronLeft, X, ChevronDown, Brain, ExternalLink, Video, Settings } from 'lucide-vue-next';
+import { ChevronLeft, X, ChevronDown, Brain, ExternalLink, Video, Settings, TableProperties } from 'lucide-vue-next';
 import { dividendApi, type Dividend } from '@/services/dividend';
 import { skillApi, type Skill } from '@/services/skill';
 import { pointsApi, type PointsTableRow } from '@/services/points';
@@ -16,6 +16,8 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 import TaskSubmitModal from '@/components/TaskSubmitModal.vue';
 import TaskDataGrid, { type Member } from '@/components/TaskDataGrid.vue';
 import ColumnManagerPanel from '@/components/ColumnManagerPanel.vue';
+import BitableBindingTab from '@/pages/project/tabs/BitableBindingTab.vue';
+import { bitableApi, getFeishuTableUrl, type BitableBinding } from '@/services/bitable';
 
 const route = useRoute();
 const router = useRouter();
@@ -42,7 +44,7 @@ async function openReviewMeeting(): Promise<void> {
 }
 
 // ─── Tab 状态 ────────────────────────────────────────────────────────────────
-type TabKey = 'tasks' | 'points' | 'dividends' | 'skills';
+type TabKey = 'tasks' | 'points' | 'dividends' | 'skills' | 'bitable';
 const activeTab = ref<TabKey>('tasks');
 
 // ─── 通用 ────────────────────────────────────────────────────────────────────
@@ -59,6 +61,12 @@ const memberUsers = ref<Member[]>([]);
 const customColumns = ref<FieldDef[]>([]);
 const showColumnManager = ref(false);
 const isProjectLead = computed(() => permissionStore.can('update', 'projects'));
+
+// ─── Bitable binding (for quick-view link in tasks tab) ──────────────────────
+const bitableBinding = ref<BitableBinding | null>(null);
+const feishuTableUrl = computed(() =>
+  bitableBinding.value ? getFeishuTableUrl(bitableBinding.value) : null,
+);
 
 // ─── 公分表 Tab ──────────────────────────────────────────────────────────────
 const pointsRows = ref<PointsTableRow[]>([]);
@@ -90,12 +98,13 @@ const skillDetailLoading = ref(false);
 // ─── 初始化加载 ──────────────────────────────────────────────────────────────
 async function load() {
   try {
-    const [projRes, taskRes, membersRes, allUsers, customFieldsRes] = await Promise.all([
+    const [projRes, taskRes, membersRes, allUsers, customFieldsRes, bindingData] = await Promise.all([
       projectApi.get(projectId.value),
       taskApi.list(projectId.value),
       projectApi.getMembers(projectId.value),
       adminApi.listUsers(),
       customFieldsApi.get(projectId.value),
+      bitableApi.getBinding(projectId.value).catch(() => null),
     ]);
     project.value = projRes.data;
     tasks.value = taskRes.data;
@@ -105,6 +114,7 @@ async function load() {
       name: userMap.get(m.userId) ?? m.userId,
     }));
     customColumns.value = customFieldsRes.data;
+    bitableBinding.value = bindingData ?? null;
   } catch {
     // ignore
   } finally {
@@ -343,11 +353,12 @@ const reviewStatusLabel: Record<Submission['aiReviewStatus'], string> = {
   failed: '评审失败',
 };
 
-const tabDefs: Array<{ key: TabKey; label: string }> = [
+const tabDefs: Array<{ key: TabKey; label: string; leadOnly?: boolean }> = [
   { key: 'tasks', label: '任务' },
   { key: 'points', label: '公分表' },
   { key: 'dividends', label: '分红' },
   { key: 'skills', label: 'Skill' },
+  { key: 'bitable', label: '飞书表格', leadOnly: true },
 ];
 </script>
 
@@ -394,7 +405,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
       <div class="border-b border-border mb-6">
         <nav class="flex gap-6">
           <button
-            v-for="tab in tabDefs"
+            v-for="tab in tabDefs.filter(t => !t.leadOnly || isProjectLead)"
             :key="tab.key"
             class="pb-3 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px cursor-pointer"
             :class="
@@ -426,6 +437,17 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               <Settings class="w-3.5 h-3.5 mr-1" />
               列管理
             </BaseButton>
+            <a
+              v-if="feishuTableUrl"
+              :href="feishuTableUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 px-2 py-1 rounded hover:bg-secondary cursor-pointer"
+            >
+              <TableProperties class="w-3.5 h-3.5" />
+              在飞书中查看
+              <ExternalLink class="w-3 h-3 opacity-60" />
+            </a>
           </div>
           <BaseButton
             v-if="permissionStore.can('create', 'votes')"
@@ -777,6 +799,11 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ── 飞书表格 Tab ─────────────────────────────────────────────────────── -->
+      <div v-else-if="activeTab === 'bitable'">
+        <BitableBindingTab :project-id="projectId" />
       </div>
 
       <!-- ── Skill Tab ──────────────────────────────────────────────────────── -->

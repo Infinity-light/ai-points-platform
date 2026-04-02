@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SettlementService } from './settlement.service';
 import { SettlementController } from './settlement.controller';
+import { MeetingSettlementListener } from './meeting-settlement.listener';
 import { Settlement } from './entities/settlement.entity';
 import { VoteModule } from '../vote/vote.module';
 import { TaskModule } from '../task/task.module';
@@ -27,7 +28,7 @@ import { PointsSnapshot } from '../points/entities/points-snapshot.entity';
     RbacModule,
   ],
   controllers: [SettlementController],
-  providers: [SettlementService],
+  providers: [SettlementService, MeetingSettlementListener],
   exports: [SettlementService],
 })
 export class SettlementModule {}

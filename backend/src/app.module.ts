@@ -6,7 +6,6 @@ import { QueueModule } from './queue/queue.module';
 import { TenantModule } from './tenant/tenant.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { InviteModule } from './invite/invite.module';
 import { ProjectModule } from './project/project.module';
 import { TaskModule } from './task/task.module';
 import { AiModule } from './ai/ai.module';
@@ -49,7 +48,6 @@ import feishuConfig from './config/feishu.config';
     TenantModule,
     UserModule,
     AuthModule,
-    InviteModule,
     ProjectModule,
     TaskModule,
     AiModule,

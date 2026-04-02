@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Settlement } from './entities/settlement.entity';
 import { VoteService } from '../vote/vote.service';
 import { VoteSessionStatus } from '../vote/entities/vote-session.entity';
@@ -39,6 +40,7 @@ export class SettlementService {
     private readonly pointsService: PointsService,
     private readonly projectService: ProjectService,
     private readonly dividendService: DividendService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -101,7 +103,7 @@ export class SettlementService {
             newRound, // Acquired at this new round
             taskId,
             voteSessionId,
-            PoolStatus.PROJECT_ONLY,
+            PoolStatus.APPROVED,
           );
           totalPointsAwarded += finalPoints;
           affectedUsers.add(task.assigneeId);
@@ -227,7 +229,7 @@ export class SettlementService {
               newRound,
               taskId,
               meetingId,
-              PoolStatus.PROJECT_ONLY,
+              PoolStatus.APPROVED,
             );
             totalPointsAwarded += userPoints;
             affectedUsers.add(contrib.userId);
@@ -241,7 +243,7 @@ export class SettlementService {
             newRound,
             taskId,
             meetingId,
-            PoolStatus.PROJECT_ONLY,
+            PoolStatus.APPROVED,
           );
           totalPointsAwarded += finalPoints;
           affectedUsers.add(task.assigneeId);
@@ -321,6 +323,13 @@ export class SettlementService {
       console.error('Failed to create post-meeting snapshot/dividend draft:', err);
     }
 
+    this.eventEmitter.emit('settlement.completed', {
+      projectId: project.id,
+      tenantId,
+      settlementId: savedSettlement.id,
+      settledTaskIds,
+    });
+
     return savedSettlement;
   }
 
@@ -392,7 +401,7 @@ export class SettlementService {
             );
             await this.pointsService.awardPoints(
               tenantId, contrib.userId, project.id, userPoints,
-              newRound, taskId, meetingId, PoolStatus.PROJECT_ONLY,
+              newRound, taskId, meetingId, PoolStatus.APPROVED,
             );
             totalPointsAwarded += userPoints;
             affectedUsers.add(contrib.userId);
@@ -400,7 +409,7 @@ export class SettlementService {
         } else if (task.assigneeId) {
           await this.pointsService.awardPoints(
             tenantId, task.assigneeId, project.id, finalPoints,
-            newRound, taskId, meetingId, PoolStatus.PROJECT_ONLY,
+            newRound, taskId, meetingId, PoolStatus.APPROVED,
           );
           totalPointsAwarded += finalPoints;
           affectedUsers.add(task.assigneeId);
@@ -451,6 +460,13 @@ export class SettlementService {
     } catch (err) {
       console.error('Failed to create post-settlement snapshot/dividend draft:', err);
     }
+
+    this.eventEmitter.emit('settlement.completed', {
+      projectId: project.id,
+      tenantId,
+      settlementId: savedSettlement.id,
+      settledTaskIds,
+    });
 
     return savedSettlement;
   }
