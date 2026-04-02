@@ -18,6 +18,7 @@ const RESOURCES = [
   'bulletin',
   'auctions',
   'roles',
+  'feishu',
 ] as const;
 
 // 标准动作 + 特殊动作（按资源）
@@ -28,6 +29,7 @@ const SPECIAL_ACTIONS: Record<string, string[]> = {
   settlements: ['trigger'],
   votes: ['manage'],
   auctions: ['bid'],
+  feishu: ['manage'],
 };
 
 function actionsForResource(resource: string): string[] {
@@ -50,6 +52,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   bulletin: '公示区',
   auctions: '竞拍',
   roles: '角色权限',
+  feishu: '飞书集成',
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -263,8 +266,7 @@ onMounted(() => {
           </div>
           <button
             class="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors duration-200 cursor-pointer"
-            :disabled="matrixSaving || selectedRole.isSystem"
-            :title="selectedRole.isSystem ? '系统内置角色权限不可修改' : ''"
+            :disabled="matrixSaving"
             @click="savePermissions"
           >
             <Loader2 v-if="matrixSaving" class="w-4 h-4 animate-spin" />
@@ -275,9 +277,6 @@ onMounted(() => {
 
         <p v-if="matrixError" class="text-sm text-destructive mb-3">{{ matrixError }}</p>
         <p v-if="matrixSuccess" class="text-sm text-green-400 mb-3">权限已保存</p>
-        <p v-if="selectedRole.isSystem" class="text-xs text-yellow-400 mb-3">
-          系统内置角色权限不可修改
-        </p>
 
         <div v-if="matrixLoading" class="space-y-2">
           <div v-for="i in 8" :key="i" class="h-10 bg-secondary rounded animate-pulse" />
@@ -315,8 +314,7 @@ onMounted(() => {
                     v-if="isActionAvailable(resource, action)"
                     type="checkbox"
                     :checked="permMatrix[resource]?.[action] ?? false"
-                    :disabled="selectedRole.isSystem"
-                    class="w-4 h-4 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    class="w-4 h-4 accent-primary cursor-pointer"
                     @change="togglePerm(resource, action)"
                   />
                   <span v-else class="text-muted-foreground/30">—</span>
