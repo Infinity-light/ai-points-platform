@@ -25,7 +25,7 @@ export class AiProvider {
   @Column({ length: 50 })
   type!: 'anthropic' | 'openai' | 'azure_openai' | 'custom';
 
-  @Column({ length: 500, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   baseUrl!: string | null;
 
   @Column({ default: true })
