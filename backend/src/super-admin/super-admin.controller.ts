@@ -15,12 +15,12 @@ import { SuperAdminService } from './super-admin.service';
 import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
 import { UpdateTenantDto } from '../tenant/dto/update-tenant.dto';
 import { UpdateConfigDto } from './dto/update-config.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 
 @Controller('super-admin')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 @CheckPolicies('tenants', 'read')
 export class SuperAdminController {
   constructor(private readonly superAdminService: SuperAdminService) {}

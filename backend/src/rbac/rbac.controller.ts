@@ -15,7 +15,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { RbacService } from './rbac.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from './policies.guard';
 import { CheckPolicies } from './decorators/check-policies.decorator';
 import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
@@ -33,7 +33,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('rbac')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 export class RbacController {
   constructor(private readonly rbacService: RbacService) {}
 

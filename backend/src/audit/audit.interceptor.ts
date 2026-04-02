@@ -77,7 +77,7 @@ export class AuditInterceptor implements NestInterceptor {
     const resource = extractResourceFromUrl(request.url);
     const action = mapMethodToAction(method, request.url);
     const ipAddress = extractIpAddress(request);
-    const source = user.authSource ?? 'jwt';
+    const source = user.authSource ?? 'web';
 
     return next.handle().pipe(
       tap({

@@ -17,10 +17,11 @@ export interface AiProvider {
 export interface AiProviderKey {
   id: string;
   providerId: string;
-  keyMask: string;
+  label: string;
+  encryptedKey: string;
+  model: string | null;
   isActive: boolean;
-  cooldownUntil: string | null;
-  usageCount: number;
+  lastUsedAt: string | null;
   createdAt: string;
 }
 
@@ -44,7 +45,9 @@ export interface CreateProviderPayload {
 }
 
 export interface CreateProviderKeyPayload {
-  apiKey: string;
+  label: string;
+  key: string;
+  model?: string;
 }
 
 export interface CreateOpenApiKeyPayload {

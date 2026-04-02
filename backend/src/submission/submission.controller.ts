@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { SubmissionService } from './submission.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -17,7 +17,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('submissions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class SubmissionController {
   constructor(private readonly submissionService: SubmissionService) {}
 

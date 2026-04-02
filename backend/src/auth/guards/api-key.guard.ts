@@ -19,7 +19,7 @@ export class ApiKeyGuard implements CanActivate {
       sub: key.createdBy,
       tenantId: key.tenantId,
       email: '',
-      authSource: 'api_key',
+      authSource: 'open_api',
     };
     (req as unknown as Record<string, unknown>)['tenantId'] = key.tenantId;
     return true;

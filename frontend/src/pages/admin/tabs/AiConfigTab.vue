@@ -33,6 +33,7 @@ const providerSaving = ref(false);
 const expandedProviderId = ref<string | null>(null);
 const providerKeys = ref<AiProviderKey[]>([]);
 const keysLoading = ref(false);
+const newKeyLabel = ref('');
 const newKeyValue = ref('');
 const newKeyMasked = ref(true);
 const addingKey = ref(false);
@@ -97,13 +98,15 @@ async function toggleKeys(providerId: string) {
 }
 
 async function addProviderKey() {
-  if (!newKeyValue.value.trim() || !expandedProviderId.value) return;
+  if (!newKeyValue.value.trim() || !newKeyLabel.value.trim() || !expandedProviderId.value) return;
   addingKey.value = true;
   try {
     const res = await aiConfigApi.addKey(expandedProviderId.value, {
-      apiKey: newKeyValue.value.trim(),
+      label: newKeyLabel.value.trim(),
+      key: newKeyValue.value.trim(),
     });
     providerKeys.value.push(res.data);
+    newKeyLabel.value = '';
     newKeyValue.value = '';
   } catch {
     providerError.value = '添加 Key 失败';
@@ -345,12 +348,13 @@ function formatDate(s: string | null) {
                   class="flex items-center justify-between text-xs bg-background/50 rounded px-3 py-2"
                 >
                   <div class="flex items-center gap-3">
-                    <span class="font-mono text-foreground">{{ pk.keyMask }}</span>
+                    <span class="font-medium text-foreground">{{ pk.label }}</span>
+                    <span class="font-mono text-muted-foreground">{{ pk.encryptedKey.slice(0, 8) }}...{{ pk.encryptedKey.slice(-4) }}</span>
                     <span
                       class="w-1.5 h-1.5 rounded-full"
                       :class="pk.isActive ? 'bg-green-400' : 'bg-yellow-400'"
                     />
-                    <span class="text-muted-foreground">调用 {{ pk.usageCount }} 次</span>
+                    <span v-if="pk.model" class="text-muted-foreground">{{ pk.model }}</span>
                   </div>
                   <button
                     class="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
@@ -361,6 +365,11 @@ function formatDate(s: string | null) {
                 </div>
               </div>
               <div class="flex gap-2">
+                <input
+                  v-model="newKeyLabel"
+                  placeholder="标签（如：主力 Key）"
+                  class="w-28 border border-border rounded px-3 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                />
                 <div class="relative flex-1">
                   <input
                     v-model="newKeyValue"
@@ -379,7 +388,7 @@ function formatDate(s: string | null) {
                 </div>
                 <button
                   class="px-3 py-1.5 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer"
-                  :disabled="addingKey || !newKeyValue.trim()"
+                  :disabled="addingKey || !newKeyValue.trim() || !newKeyLabel.trim()"
                   @click="addProviderKey"
                 >
                   {{ addingKey ? '...' : '添加' }}

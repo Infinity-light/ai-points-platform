@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { BrainService } from './brain.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { IsString, IsNotEmpty, IsArray } from 'class-validator';
 
@@ -31,7 +31,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('brain')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class BrainController {
   constructor(private readonly brainService: BrainService) {}
 

@@ -7,8 +7,12 @@ import { AuthController } from './auth.controller';
 import { EmailService } from './email.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ApiKeyGuard } from './guards/api-key.guard';
+import { CompositeAuthGuard } from './guards/composite-auth.guard';
 import { UserModule } from '../user/user.module';
 import { TenantModule } from '../tenant/tenant.module';
+import { AiConfigModule } from '../ai-config/ai-config.module';
 import { UserRole } from '../rbac/entities/user-role.entity';
 
 @Module({
@@ -18,9 +22,10 @@ import { UserRole } from '../rbac/entities/user-role.entity';
     TypeOrmModule.forFeature([UserRole]),
     UserModule,
     TenantModule,
+    AiConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailService, JwtStrategy, JwtRefreshStrategy],
-  exports: [AuthService, JwtStrategy],
+  providers: [AuthService, EmailService, JwtStrategy, JwtRefreshStrategy, JwtAuthGuard, ApiKeyGuard, CompositeAuthGuard],
+  exports: [AuthService, JwtStrategy, JwtAuthGuard, ApiKeyGuard, CompositeAuthGuard],
 })
 export class AuthModule {}

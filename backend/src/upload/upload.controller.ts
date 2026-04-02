@@ -10,7 +10,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UploadService } from './upload.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -18,7 +18,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('uploads')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
