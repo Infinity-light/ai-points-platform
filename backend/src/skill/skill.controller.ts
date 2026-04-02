@@ -7,7 +7,6 @@ import {
   Request,
 } from '@nestjs/common';
 import { SkillService } from './skill.service';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -15,7 +14,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller()
-@UseGuards(CompositeAuthGuard)
+// Auth handled by global CompositeAuthGuard
 export class SkillController {
   constructor(private readonly skillService: SkillService) {}
 

@@ -9,7 +9,6 @@ import {
   Request,
 } from '@nestjs/common';
 import { DividendService } from './dividend.service';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -26,7 +25,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('dividends')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 export class DividendController {
   constructor(private readonly dividendService: DividendService) {}
 

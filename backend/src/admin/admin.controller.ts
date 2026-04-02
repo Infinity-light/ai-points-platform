@@ -12,7 +12,6 @@ import {
 import { AdminService } from './admin.service';
 import { ToggleInviteDto } from './dto/toggle-invite.dto';
 import { CreateInviteDto } from '../invite/dto/create-invite.dto';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
@@ -43,7 +42,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('admin')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 @CheckPolicies('users', 'read')
 export class AdminController {
   constructor(

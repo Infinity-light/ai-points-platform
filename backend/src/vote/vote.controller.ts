@@ -9,7 +9,6 @@ import {
   Request,
 } from '@nestjs/common';
 import { VoteService } from './vote.service';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -36,7 +35,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('vote-sessions')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 export class VoteController {
   constructor(private readonly voteService: VoteService) {}
 

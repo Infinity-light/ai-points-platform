@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { InviteService } from './invite.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -20,7 +19,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('invites')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 export class InviteController {
   constructor(private readonly inviteService: InviteService) {}
 

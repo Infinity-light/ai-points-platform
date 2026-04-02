@@ -8,13 +8,12 @@ import {
   DefaultValuePipe,
 } from '@nestjs/common';
 import { AuditService } from './audit.service';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
 
 @Controller('audit')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 @CheckPolicies('audit', 'read')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

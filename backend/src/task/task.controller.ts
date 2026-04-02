@@ -12,7 +12,6 @@ import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TransitionTaskDto } from './dto/transition-task.dto';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -20,7 +19,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('projects/:projectId/tasks')
-@UseGuards(CompositeAuthGuard)
+// Auth handled by global CompositeAuthGuard
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 

@@ -16,7 +16,6 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateCustomFieldsDto } from './dto/update-custom-fields.dto';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -26,7 +25,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('projects')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 

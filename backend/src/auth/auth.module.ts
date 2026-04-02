@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { EmailService } from './email.service';
@@ -23,7 +24,17 @@ import { UserRole } from '../rbac/entities/user-role.entity';
     AiConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailService, JwtStrategy, JwtRefreshStrategy, CompositeAuthGuard],
-  exports: [AuthService, JwtStrategy, CompositeAuthGuard],
+  providers: [
+    AuthService,
+    EmailService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    CompositeAuthGuard,
+    {
+      provide: APP_GUARD,
+      useClass: CompositeAuthGuard,
+    },
+  ],
+  exports: [AuthService, JwtStrategy],
 })
 export class AuthModule {}

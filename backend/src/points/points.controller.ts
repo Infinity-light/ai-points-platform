@@ -8,7 +8,6 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { PointsService } from './points.service';
@@ -26,7 +25,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('points')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 export class PointsController {
   constructor(private readonly pointsService: PointsService) {}
 

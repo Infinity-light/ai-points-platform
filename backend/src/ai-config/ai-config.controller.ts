@@ -9,7 +9,6 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -26,7 +25,7 @@ interface RequestWithUser extends Request {
 // Ensure RBAC seed data includes resource='config', action='manage'
 // for super_admin and hr_admin roles.
 @Controller('ai-config')
-@UseGuards(CompositeAuthGuard, PoliciesGuard)
+@UseGuards(PoliciesGuard)
 @CheckPolicies('config', 'manage')
 export class AiConfigController {
   constructor(
