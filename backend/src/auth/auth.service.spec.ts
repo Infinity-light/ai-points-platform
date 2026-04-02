@@ -7,6 +7,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ConflictException, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Role } from '../user/enums/role.enum';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { UserRole } from '../rbac/entities/user-role.entity';
 
 const mockUser = {
   id: 'user-uuid',
@@ -35,15 +37,25 @@ const mockTenant = {
   updatedAt: new Date(),
 };
 
+// Mock Redis
+const redisStore: Record<string, string> = {};
+const mockRedis = {
+  set: jest.fn(async (key: string, value: string) => { redisStore[key] = value; return 'OK'; }),
+  get: jest.fn(async (key: string) => redisStore[key] ?? null),
+  del: jest.fn(async (key: string) => { delete redisStore[key]; return 1; }),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
   let userService: jest.Mocked<UserService>;
   let tenantService: jest.Mocked<TenantService>;
   let emailService: jest.Mocked<EmailService>;
-  let jwtService: jest.Mocked<JwtService>;
-  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(async () => {
+    // Clear Redis store between tests
+    Object.keys(redisStore).forEach(k => delete redisStore[k]);
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -51,6 +63,7 @@ describe('AuthService', () => {
           provide: UserService,
           useValue: {
             create: jest.fn(),
+            createVerified: jest.fn(),
             findByEmail: jest.fn(),
             findById: jest.fn(),
             findByIdGlobal: jest.fn(),
@@ -66,6 +79,7 @@ describe('AuthService', () => {
           provide: TenantService,
           useValue: {
             findBySlug: jest.fn(),
+            findOne: jest.fn().mockResolvedValue(mockTenant),
           },
         },
         {
@@ -86,6 +100,17 @@ describe('AuthService', () => {
             get: jest.fn().mockReturnValue('test-secret'),
           },
         },
+        {
+          provide: getRepositoryToken(UserRole),
+          useValue: {
+            create: jest.fn().mockReturnValue({}),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: 'REDIS_CLIENT',
+          useValue: mockRedis,
+        },
       ],
     }).compile();
 
@@ -93,15 +118,12 @@ describe('AuthService', () => {
     userService = module.get(UserService);
     tenantService = module.get(TenantService);
     emailService = module.get(EmailService);
-    jwtService = module.get(JwtService);
-    configService = module.get(ConfigService);
   });
 
   describe('register', () => {
-    it('应该成功注册并发送验证码', async () => {
+    it('应该存入 Redis 并发送验证码，不创建用户', async () => {
       tenantService.findBySlug.mockResolvedValue(mockTenant as any);
-      userService.create.mockResolvedValue(mockUser as any);
-      userService.updateEmailVerification.mockResolvedValue(undefined);
+      userService.findByEmail.mockResolvedValue(null);
       emailService.sendVerificationCode.mockResolvedValue(undefined);
 
       const result = await service.register({
@@ -111,12 +133,15 @@ describe('AuthService', () => {
         tenantSlug: 'test-org',
       });
 
-      expect(result.userId).toBe(mockUser.id);
+      expect(result.pendingId).toBeDefined();
       expect(result.message).toContain('验证码');
+      expect(mockRedis.set).toHaveBeenCalled();
+      expect(userService.create).not.toHaveBeenCalled();
+      expect(userService.createVerified).not.toHaveBeenCalled();
       expect(emailService.sendVerificationCode).toHaveBeenCalledWith(
-        mockUser.email,
+        'test@example.com',
         expect.any(String),
-        mockUser.name,
+        '测试用户',
       );
     });
 
@@ -126,54 +151,66 @@ describe('AuthService', () => {
         .rejects.toThrow(NotFoundException);
     });
 
-    it('禁用租户应该抛出 NotFoundException', async () => {
-      tenantService.findBySlug.mockResolvedValue({ ...mockTenant, isActive: false } as any);
-      await expect(service.register({ email: 'a@b.com', password: 'pass123!', name: 'test', tenantSlug: 'test-org' }))
-        .rejects.toThrow(NotFoundException);
+    it('邮箱已被已验证用户占用时应该抛出 ConflictException', async () => {
+      tenantService.findBySlug.mockResolvedValue(mockTenant as any);
+      userService.findByEmail.mockResolvedValue({ ...mockUser, isEmailVerified: true } as any);
+
+      await expect(service.register({ email: 'test@example.com', password: 'pass123!', name: 'test', tenantSlug: 'test-org' }))
+        .rejects.toThrow(ConflictException);
+    });
+
+    it('邮箱被未验证用户占用时应该允许注册', async () => {
+      tenantService.findBySlug.mockResolvedValue(mockTenant as any);
+      userService.findByEmail.mockResolvedValue({ ...mockUser, isEmailVerified: false } as any);
+      emailService.sendVerificationCode.mockResolvedValue(undefined);
+
+      const result = await service.register({
+        email: 'test@example.com',
+        password: 'password123',
+        name: '测试用户',
+        tenantSlug: 'test-org',
+      });
+
+      expect(result.pendingId).toBeDefined();
     });
   });
 
   describe('verifyEmail', () => {
-    it('正确验证码应该返回 token', async () => {
-      const expiry = new Date(Date.now() + 60000);
-      userService.findByIdWithVerificationCode.mockResolvedValue({
-        ...mockUser,
-        isEmailVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: expiry,
-      } as any);
-      userService.verifyEmail.mockResolvedValue(undefined);
+    it('正确验证码应该创建用户并返回 token', async () => {
+      // 先注册存入 Redis
+      tenantService.findBySlug.mockResolvedValue(mockTenant as any);
+      userService.findByEmail.mockResolvedValue(null);
+      emailService.sendVerificationCode.mockResolvedValue(undefined);
+      const reg = await service.register({
+        email: 'test@example.com', password: 'password123', name: '测试用户', tenantSlug: 'test-org',
+      });
+
+      // 从 Redis 中获取验证码
+      const pending = JSON.parse(redisStore[`register:${reg.pendingId}`]);
+
+      userService.createVerified.mockResolvedValue(mockUser as any);
       userService.updateRefreshToken.mockResolvedValue(undefined);
 
-      const result = await service.verifyEmail({ userId: mockUser.id, code: '123456' });
+      const result = await service.verifyEmail({ pendingId: reg.pendingId, code: pending.verificationCode });
 
       expect(result.accessToken).toBe('mock-token');
-      expect(userService.verifyEmail).toHaveBeenCalledWith(mockUser.id);
+      expect(userService.createVerified).toHaveBeenCalled();
     });
 
     it('错误验证码应该抛出 BadRequestException', async () => {
-      const expiry = new Date(Date.now() + 60000);
-      userService.findByIdWithVerificationCode.mockResolvedValue({
-        ...mockUser,
-        isEmailVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: expiry,
-      } as any);
+      tenantService.findBySlug.mockResolvedValue(mockTenant as any);
+      userService.findByEmail.mockResolvedValue(null);
+      emailService.sendVerificationCode.mockResolvedValue(undefined);
+      const reg = await service.register({
+        email: 'test@example.com', password: 'password123', name: '测试用户', tenantSlug: 'test-org',
+      });
 
-      await expect(service.verifyEmail({ userId: mockUser.id, code: '000000' }))
+      await expect(service.verifyEmail({ pendingId: reg.pendingId, code: '000000' }))
         .rejects.toThrow(BadRequestException);
     });
 
-    it('过期验证码应该抛出 BadRequestException', async () => {
-      const expiry = new Date(Date.now() - 1000); // 过期
-      userService.findByIdWithVerificationCode.mockResolvedValue({
-        ...mockUser,
-        isEmailVerified: false,
-        emailVerificationCode: '123456',
-        emailVerificationExpiry: expiry,
-      } as any);
-
-      await expect(service.verifyEmail({ userId: mockUser.id, code: '123456' }))
+    it('不存在的 pendingId 应该抛出 BadRequestException', async () => {
+      await expect(service.verifyEmail({ pendingId: 'nonexistent', code: '123456' }))
         .rejects.toThrow(BadRequestException);
     });
   });

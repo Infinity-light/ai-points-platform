@@ -14,7 +14,7 @@ const authStore = useAuthStore();
 
 const mode = ref<'join' | 'create'>('create');
 const step = ref<1 | 2>(1);
-const pendingUserId = ref('');
+const pendingId = ref('');
 const pendingEmail = ref('');
 
 const form = reactive({
@@ -117,7 +117,7 @@ async function handleRegister() {
         ...(form.inviteCode && { inviteCode: form.inviteCode.trim() }),
       });
     }
-    pendingUserId.value = res.data.userId;
+    pendingId.value = res.data.pendingId;
     pendingEmail.value = form.email;
     step.value = 2;
     startResendCooldown();
@@ -139,7 +139,7 @@ async function handleVerify() {
   }
   loading.value = true;
   try {
-    const res = await authApi.verifyEmail(pendingUserId.value, verificationCode.value);
+    const res = await authApi.verifyEmail(pendingId.value, verificationCode.value);
     authStore.setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
     await router.push('/dashboard');
   } catch (err: unknown) {
@@ -155,7 +155,7 @@ async function handleResend() {
   loading.value = true;
   verificationError.value = '';
   try {
-    await authApi.resendVerification(pendingUserId.value);
+    await authApi.resendVerification(pendingId.value);
     startResendCooldown();
   } catch {
     verificationError.value = '发送失败，请稍后重试';

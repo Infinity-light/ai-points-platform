@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   ConflictException,
   UnauthorizedException,
   BadRequestException,
@@ -8,6 +9,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
+import Redis from 'ioredis';
 import { UserService } from '../user/user.service';
 import { TenantService } from '../tenant/tenant.service';
 import { EmailService } from './email.service';
@@ -22,6 +25,10 @@ import { UserRole } from '../rbac/entities/user-role.entity';
 
 /** Well-known UUID for the seeded super_admin role (migration 018) */
 const SUPER_ADMIN_ROLE_ID = '00000000-0000-0000-0000-000000000001';
+
+const SALT_ROUNDS = 12;
+const REDIS_PREFIX = 'register:';
+const REDIS_TTL = 900; // 15 minutes
 
 export interface TokenPair {
   accessToken: string;
@@ -39,6 +46,19 @@ export interface AuthResponse extends TokenPair {
   };
 }
 
+interface PendingRegistration {
+  email: string;
+  passwordHash: string;
+  name: string;
+  phone?: string;
+  tenantId?: string;
+  inviteCode?: string;
+  verificationCode: string;
+  mode: 'join' | 'create';
+  orgName?: string;
+  orgSlug?: string;
+}
+
 function generateCode(length = 6): string {
   return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
 }
@@ -53,123 +73,167 @@ export class AuthService {
     private readonly emailService: EmailService,
     @InjectRepository(UserRole)
     private readonly userRoleRepo: Repository<UserRole>,
+    @Inject('REDIS_CLIENT')
+    private readonly redis: Redis,
   ) {}
 
-  async register(dto: RegisterDto): Promise<{ userId: string; message: string }> {
+  async register(dto: RegisterDto): Promise<{ pendingId: string; message: string }> {
     // 1. 验证租户
     const tenant = await this.tenantService.findBySlug(dto.tenantSlug);
     if (!tenant || !tenant.isActive) {
       throw new NotFoundException('组织不存在或已停用');
     }
 
-    // 2. 如果有邀请码，校验（这里只做基本存储，Invite模块在T09中会做完整校验）
-    // 邀请码校验逻辑由 InviteService 处理，Auth 仅传递给 User
-
-    // 3. 创建用户
-    let user: User;
-    try {
-      user = await this.userService.create({
-        tenantId: tenant.id,
-        email: dto.email,
-        password: dto.password,
-        name: dto.name,
-        phone: dto.phone,
-        inviteCode: dto.inviteCode,
-      });
-    } catch (err) {
-      if ((err as { status?: number })?.status === 409) {
-        throw new ConflictException('该邮箱在此组织中已被注册');
-      }
-      throw err;
+    // 2. 检查邮箱是否已被已验证用户占用
+    const existingUser = await this.userService.findByEmail(tenant.id, dto.email);
+    if (existingUser && existingUser.isEmailVerified) {
+      throw new ConflictException('该邮箱在此组织中已被注册');
     }
 
-    // 4. 生成验证码并发送邮件
+    // 3. Hash 密码，生成 pendingId 和验证码
+    const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+    const pendingId = randomUUID();
     const code = generateCode(6);
-    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15分钟
-    await this.userService.updateEmailVerification(user.id, code, expiry);
-    await this.emailService.sendVerificationCode(user.email, code, user.name);
 
-    return { userId: user.id, message: '注册成功，请检查邮箱并输入验证码' };
+    // 4. 存入 Redis
+    const pending: PendingRegistration = {
+      email: dto.email,
+      passwordHash,
+      name: dto.name,
+      phone: dto.phone,
+      tenantId: tenant.id,
+      inviteCode: dto.inviteCode,
+      verificationCode: code,
+      mode: 'join',
+    };
+    await this.redis.set(
+      `${REDIS_PREFIX}${pendingId}`,
+      JSON.stringify(pending),
+      'EX',
+      REDIS_TTL,
+    );
+
+    // 5. 发送验证码邮件
+    await this.emailService.sendVerificationCode(dto.email, code, dto.name);
+
+    return { pendingId, message: '注册成功，请检查邮箱并输入验证码' };
   }
 
-  async registerWithOrg(dto: RegisterOrgDto): Promise<{ userId: string; message: string }> {
-    // 1. 创建租户
-    let tenant;
-    try {
-      tenant = await this.tenantService.create({
-        name: dto.orgName,
-        slug: dto.orgSlug,
-      });
-    } catch (err) {
-      if ((err as { status?: number })?.status === 409) {
-        throw new ConflictException('该组织标识已被占用');
-      }
-      throw err;
+  async registerWithOrg(dto: RegisterOrgDto): Promise<{ pendingId: string; message: string }> {
+    // 1. 校验 slug 可用性
+    const existingTenant = await this.tenantService.findBySlug(dto.orgSlug);
+    if (existingTenant) {
+      throw new ConflictException('该组织标识已被占用');
     }
 
-    // 2. 创建用户（第一个用户，自动成为 super_admin）
-    let user: User;
-    try {
-      user = await this.userService.create({
-        tenantId: tenant.id,
-        email: dto.email,
-        password: dto.password,
-        name: dto.name,
-        phone: dto.phone,
-      });
-    } catch (err) {
-      // 用户创建失败时清理租户
-      try { await this.tenantService.remove(tenant.id); } catch { /* ignore cleanup error */ }
-      if ((err as { status?: number })?.status === 409) {
-        throw new ConflictException('该邮箱已被注册');
-      }
-      throw err;
-    }
+    // 2. Hash 密码，生成 pendingId 和验证码
+    const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+    const pendingId = randomUUID();
+    const code = generateCode(6);
 
-    // 3. 分配 super_admin 角色给组织创建者
-    await this.userRoleRepo.save(
-      this.userRoleRepo.create({ userId: user.id, roleId: SUPER_ADMIN_ROLE_ID }),
+    // 3. 存入 Redis
+    const pending: PendingRegistration = {
+      email: dto.email,
+      passwordHash,
+      name: dto.name,
+      phone: dto.phone,
+      verificationCode: code,
+      mode: 'create',
+      orgName: dto.orgName,
+      orgSlug: dto.orgSlug,
+    };
+    await this.redis.set(
+      `${REDIS_PREFIX}${pendingId}`,
+      JSON.stringify(pending),
+      'EX',
+      REDIS_TTL,
     );
 
     // 4. 发送验证码
-    const code = generateCode(6);
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
-    await this.userService.updateEmailVerification(user.id, code, expiry);
-    await this.emailService.sendVerificationCode(user.email, code, user.name);
+    await this.emailService.sendVerificationCode(dto.email, code, dto.name);
 
-    return { userId: user.id, message: '组织创建成功，请检查邮箱并输入验证码' };
+    return { pendingId, message: '组织创建成功，请检查邮箱并输入验证码' };
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<AuthResponse> {
-    // 获取含验证码的用户（需要特殊查询）
-    const user = await this.userService.findByIdWithVerificationCode(dto.userId);
-    if (!user) throw new NotFoundException('用户不存在');
-    if (user.isEmailVerified) throw new BadRequestException('邮箱已验证');
-    if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
-      throw new BadRequestException('验证码不存在，请重新发送');
+    // 1. 从 Redis 读取待注册数据
+    const raw = await this.redis.get(`${REDIS_PREFIX}${dto.pendingId}`);
+    if (!raw) {
+      throw new BadRequestException('注册已过期，请重新注册');
     }
-    if (new Date() > user.emailVerificationExpiry) {
-      throw new BadRequestException('验证码已过期，请重新发送');
-    }
-    if (user.emailVerificationCode !== dto.code) {
+
+    const pending: PendingRegistration = JSON.parse(raw);
+
+    // 2. 比对验证码
+    if (pending.verificationCode !== dto.code) {
       throw new BadRequestException('验证码错误');
     }
 
-    await this.userService.verifyEmail(user.id);
+    // 3. 根据 mode 创建用户（和租户）
+    let user: User;
 
-    // 验证成功后直接登录
+    if (pending.mode === 'create') {
+      // 创建组织模式：先建租户，再建用户，分配 super_admin
+      let tenant;
+      try {
+        tenant = await this.tenantService.create({
+          name: pending.orgName!,
+          slug: pending.orgSlug!,
+        });
+      } catch (err) {
+        if ((err as { status?: number })?.status === 409) {
+          throw new ConflictException('该组织标识已被占用，请重新注册');
+        }
+        throw err;
+      }
+
+      user = await this.userService.createVerified({
+        tenantId: tenant.id,
+        email: pending.email,
+        passwordHash: pending.passwordHash,
+        name: pending.name,
+        phone: pending.phone,
+      });
+
+      // 分配 super_admin 角色
+      await this.userRoleRepo.save(
+        this.userRoleRepo.create({ userId: user.id, roleId: SUPER_ADMIN_ROLE_ID }),
+      );
+    } else {
+      // 加入组织模式
+      user = await this.userService.createVerified({
+        tenantId: pending.tenantId!,
+        email: pending.email,
+        passwordHash: pending.passwordHash,
+        name: pending.name,
+        phone: pending.phone,
+        inviteCode: pending.inviteCode,
+      });
+    }
+
+    // 4. 删除 Redis key
+    await this.redis.del(`${REDIS_PREFIX}${dto.pendingId}`);
+
+    // 5. 返回登录信息
     return this.generateAuthResponse({ ...user, isEmailVerified: true });
   }
 
-  async resendVerification(userId: string): Promise<{ message: string }> {
-    const user = await this.userService.findByIdGlobal(userId);
-    if (!user) throw new NotFoundException('用户不存在');
-    if (user.isEmailVerified) throw new BadRequestException('邮箱已验证');
+  async resendVerification(pendingId: string): Promise<{ message: string }> {
+    const key = `${REDIS_PREFIX}${pendingId}`;
+    const raw = await this.redis.get(key);
+    if (!raw) {
+      throw new BadRequestException('注册已过期，请重新注册');
+    }
 
+    const pending: PendingRegistration = JSON.parse(raw);
+
+    // 生成新验证码，重置 TTL
     const code = generateCode(6);
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
-    await this.userService.updateEmailVerification(user.id, code, expiry);
-    await this.emailService.sendVerificationCode(user.email, code, user.name);
+    pending.verificationCode = code;
+    await this.redis.set(key, JSON.stringify(pending), 'EX', REDIS_TTL);
+
+    // 重新发送邮件
+    await this.emailService.sendVerificationCode(pending.email, code, pending.name);
 
     return { message: '验证码已重新发送' };
   }

@@ -41,16 +41,16 @@ export interface AuthResponse {
 
 export const authApi = {
   register(payload: RegisterPayload) {
-    return api.post<{ userId: string; message: string }>('/auth/register', payload);
+    return api.post<{ pendingId: string; message: string }>('/auth/register', payload);
   },
   registerOrg(payload: RegisterOrgPayload) {
-    return api.post<{ userId: string; message: string }>('/auth/register-org', payload);
+    return api.post<{ pendingId: string; message: string }>('/auth/register-org', payload);
   },
-  verifyEmail(userId: string, code: string) {
-    return api.post<AuthResponse>('/auth/verify-email', { userId, code });
+  verifyEmail(pendingId: string, code: string) {
+    return api.post<AuthResponse>('/auth/verify-email', { pendingId, code });
   },
-  resendVerification(userId: string) {
-    return api.post<{ message: string }>('/auth/resend-verification', { userId });
+  resendVerification(pendingId: string) {
+    return api.post<{ message: string }>('/auth/resend-verification', { pendingId });
   },
   login(payload: LoginPayload) {
     return api.post<AuthResponse>('/auth/login', payload);

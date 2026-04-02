@@ -45,6 +45,26 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
+  async createVerified(data: {
+    tenantId: string;
+    email: string;
+    passwordHash: string;
+    name: string;
+    phone?: string;
+    inviteCode?: string;
+  }): Promise<User> {
+    const user = this.userRepository.create({
+      tenantId: data.tenantId,
+      email: data.email,
+      passwordHash: data.passwordHash,
+      name: data.name,
+      phone: data.phone ?? null,
+      inviteCodeUsed: data.inviteCode ?? null,
+      isEmailVerified: true,
+    });
+    return this.userRepository.save(user);
+  }
+
   async findByEmail(tenantId: string, email: string): Promise<User | null> {
     return this.userRepository
       .createQueryBuilder('user')
