@@ -50,6 +50,8 @@ ai-points-platform/
 │   │   ├── auction/         # 通用竞拍引擎（Bull 延迟任务 + 事件驱动）
 │   │   ├── bulletin/        # 公示区（工分排行/账目/决策/审计，支持公开模式）
 │   │   ├── ai-config/       # AI 配置中心（LLM 源 Key 轮询池 + Open API Key 管理）
+│   │   ├── feishu/          # 飞书集成（OAuth、通讯录同步、Webhook、配置管理）
+│   │   ├── department/      # 部门管理（飞书同步只读）
 │   │   ├── upload/          # 文件上传
 │   │   └── webhook/         # Git Webhook 接收
 │   ├── Dockerfile           # 多阶段构建，China mirrors，bcrypt 原生编译
@@ -230,6 +232,25 @@ tier >= maxSteps 时清零
 - `AiProviderService`：轮询调度 `getActiveKey(tenantId)`，失败 cooldown
 - `OpenApiKeyService`：SHA-256 hash 存储，`validateKey(rawKey)` 遍历匹配
 
+### feishu 模块
+
+飞书集成核心模块，封装飞书开放平台 API 交互：
+- **配置管理**：`GET/POST /feishu-config`（租户级，App Secret AES-256-GCM 加密存储）
+- **连接测试**：`POST /feishu-config/test-connection`
+- **角色映射**：`GET/POST/DELETE /feishu-config/role-mappings`（飞书职位→平台角色）
+- **通讯录同步**：`POST /feishu-config/sync`（Bull 异步全量同步）、`GET /feishu-config/sync-logs`
+- **Webhook**：`POST /feishu-webhook/:tenantId`（@Public，飞书事件回调 + challenge 验证）
+- 飞书 SDK：`@larksuiteoapi/node-sdk`，Client 实例按租户缓存在内存 Map（2h TTL）
+- 离职用户自动分配 `resigned` 角色（UUID `00000000-0000-0000-0000-000000000007`，只读权限）
+- 所有管理接口需 `config:manage` 权限
+
+### department 模块
+
+部门管理（飞书通讯录同步写入，平台只读）：
+- `GET /departments/tree`：当前租户部门树（嵌套结构）
+- `GET /departments/:id/members`：部门下成员列表（分页）
+- `departments` 表：tenantId + feishuDeptId 联合唯一索引，parentId 自引用树，isDeleted 软删除
+
 ### meeting 模块
 
 - 创建：`POST /meetings`（需 votes:create 权限）
@@ -344,8 +365,10 @@ sudo docker compose -f /opt/apps/ai-points-platform/docker-compose.prod.yml rest
 | `LLM_MODEL` | claude-sonnet-4-6 |
 | `LLM_TEMPERATURE` | 0.3 |
 | `SMTP_PASS` | 邮件发送密码 |
+| `FEISHU_ENCRYPT_KEY` | AES-256 密钥，加密飞书 App Secret |
+| `FEISHU_CALLBACK_URL` | 飞书 OAuth 回调地址 |
 
-GitHub Secrets 需配置：`SERVER_HOST`、`SERVER_USER`、`SSH_PRIVATE_KEY`、`DB_PASSWORD`、`JWT_SECRET`、`JWT_REFRESH_SECRET`、`LLM_API_KEY`、`SMTP_PASS`
+GitHub Secrets 需配置：`SERVER_HOST`、`SERVER_USER`、`SSH_PRIVATE_KEY`、`DB_PASSWORD`、`JWT_SECRET`、`JWT_REFRESH_SECRET`、`LLM_API_KEY`、`SMTP_PASS`、`FEISHU_ENCRYPT_KEY`
 
 ---
 

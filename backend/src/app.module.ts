@@ -28,17 +28,20 @@ import { MeetingModule } from './meeting/meeting.module';
 import { AuctionModule } from './auction/auction.module';
 import { BulletinModule } from './bulletin/bulletin.module';
 import { AiConfigModule } from './ai-config/ai-config.module';
+import { DepartmentModule } from './department/department.module';
+import { FeishuModule } from './feishu/feishu.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import authConfig from './config/auth.config';
 import aiConfig from './config/ai.config';
+import feishuConfig from './config/feishu.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig, authConfig, aiConfig],
+      load: [databaseConfig, redisConfig, authConfig, aiConfig, feishuConfig],
       envFilePath: '.env',
     }),
     DatabaseModule,
@@ -68,6 +71,8 @@ import aiConfig from './config/ai.config';
     AuctionModule,
     BulletinModule,
     AiConfigModule,
+    DepartmentModule,
+    FeishuModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

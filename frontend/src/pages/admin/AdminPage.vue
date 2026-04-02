@@ -67,6 +67,18 @@ const allTabs: TabDef[] = [
     component: defineAsyncComponent(() => import('./tabs/AiConfigTab.vue')),
   },
   {
+    key: 'feishu',
+    label: '飞书集成',
+    permission: { resource: 'config', action: 'update' },
+    component: defineAsyncComponent(() => import('./tabs/FeishuConfigTab.vue')),
+  },
+  {
+    key: 'departments',
+    label: '部门管理',
+    permission: { resource: 'users', action: 'read' },
+    component: defineAsyncComponent(() => import('./tabs/DepartmentTab.vue')),
+  },
+  {
     key: 'audit-log',
     label: '审计日志',
     permission: { resource: 'audit', action: 'read' },

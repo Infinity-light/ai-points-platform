@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,6 +15,7 @@ import { UserModule } from '../user/user.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { AiConfigModule } from '../ai-config/ai-config.module';
 import { UserRole } from '../rbac/entities/user-role.entity';
+import { FeishuModule } from '../feishu/feishu.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UserRole } from '../rbac/entities/user-role.entity';
     UserModule,
     TenantModule,
     AiConfigModule,
+    forwardRef(() => FeishuModule),
   ],
   controllers: [AuthController],
   providers: [

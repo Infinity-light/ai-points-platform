@@ -153,4 +153,47 @@ export class UserService {
   async findByIdGlobal(id: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { id } });
   }
+
+  async findByFeishuOpenId(tenantId: string, openId: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { tenantId, feishuOpenId: openId } });
+  }
+
+  async linkFeishu(
+    userId: string,
+    openId: string,
+    unionId: string | null,
+    avatarUrl: string | null,
+  ): Promise<User> {
+    await this.userRepository.update(userId, {
+      feishuOpenId: openId,
+      feishuUnionId: unionId,
+      avatarUrl: avatarUrl,
+    });
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException(`用户 ${userId} 不存在`);
+    return user;
+  }
+
+  async createFromFeishu(
+    tenantId: string,
+    data: {
+      email: string;
+      name: string;
+      feishuOpenId: string;
+      feishuUnionId?: string | null;
+      avatarUrl?: string | null;
+    },
+  ): Promise<User> {
+    const user = this.userRepository.create({
+      tenantId,
+      email: data.email,
+      passwordHash: '',
+      name: data.name,
+      feishuOpenId: data.feishuOpenId,
+      feishuUnionId: data.feishuUnionId ?? null,
+      avatarUrl: data.avatarUrl ?? null,
+      isEmailVerified: true,
+    });
+    return this.userRepository.save(user);
+  }
 }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/services/auth';
+import { feishuConfigApi } from '@/services/feishu-config';
 import FormField from '@/components/ui/FormField.vue';
 import BaseInput from '@/components/ui/BaseInput.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
@@ -34,6 +35,28 @@ const errors = reactive({
 
 const loading = ref(false);
 const showPassword = ref(false);
+const feishuEnabled = ref(false);
+
+async function checkFeishuEnabled(slug: string) {
+  if (!slug.trim()) {
+    feishuEnabled.value = false;
+    return;
+  }
+  try {
+    const res = await feishuConfigApi.checkFeishuEnabled(slug.trim());
+    feishuEnabled.value = res.enabled;
+  } catch {
+    feishuEnabled.value = false;
+  }
+}
+
+watch(() => form.tenantSlug, (slug) => {
+  void checkFeishuEnabled(slug);
+});
+
+function loginWithFeishu() {
+  window.location.href = `/api/auth/feishu?tenantSlug=${encodeURIComponent(form.tenantSlug.trim())}`;
+}
 
 function validate(): boolean {
   errors.tenantSlug = form.tenantSlug.trim() ? '' : '请输入组织标识';
@@ -164,6 +187,22 @@ async function handleSubmit() {
               立即注册
             </router-link>
           </p>
+
+          <!-- Feishu Login -->
+          <template v-if="feishuEnabled">
+            <div class="flex items-center gap-3 mt-5">
+              <div class="flex-1 h-px bg-border" />
+              <span class="text-xs text-muted-foreground shrink-0">或</span>
+              <div class="flex-1 h-px bg-border" />
+            </div>
+            <button
+              type="button"
+              class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              @click="loginWithFeishu"
+            >
+              飞书登录
+            </button>
+          </template>
         </div>
       </div>
     </div>

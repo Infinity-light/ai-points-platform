@@ -47,6 +47,18 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   inviteCodeUsed!: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  feishuOpenId!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  feishuUnionId!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  avatarUrl!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  departmentId!: string | null;
+
   @OneToOne(() => UserRole, { eager: false, nullable: true })
   @JoinColumn({ name: 'id', referencedColumnName: 'userId' })
   userRole!: UserRole | null;

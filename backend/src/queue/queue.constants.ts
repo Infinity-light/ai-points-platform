@@ -4,4 +4,5 @@ export const QUEUE_NAMES = {
   NOTIFICATION: 'notification',
   SETTLEMENT: 'settlement',
   AUCTION_CLOSE: 'auction-close',
+  FEISHU_SYNC: 'feishu-sync',
 } as const;

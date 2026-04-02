@@ -16,6 +16,16 @@ const routes: RouteRecordRaw[] = [
     meta: { guestOnly: true },
   },
   {
+    path: '/auth/feishu/bindConfirm',
+    name: 'FeishuBindConfirm',
+    component: () => import('@/pages/auth/FeishuBindConfirmPage.vue'),
+  },
+  {
+    path: '/auth/feishu/landing',
+    name: 'FeishuLanding',
+    component: () => import('@/pages/auth/FeishuLandingPage.vue'),
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

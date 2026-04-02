@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -22,9 +23,17 @@ import { User } from '../user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRole } from '../rbac/entities/user-role.entity';
+import { FeishuClientService } from '../feishu/feishu-client.service';
+import { FeishuConfigService } from '../feishu/feishu-config.service';
 
 /** Well-known UUID for the seeded super_admin role (migration 018) */
 const SUPER_ADMIN_ROLE_ID = '00000000-0000-0000-0000-000000000001';
+const EMPLOYEE_ROLE_ID = '00000000-0000-0000-0000-000000000004';
+
+const FEISHU_STATE_REDIS_PREFIX = 'feishu:state:';
+const FEISHU_LINK_TOKEN_PREFIX = 'feishu:link:';
+const FEISHU_STATE_TTL = 300; // 5 minutes
+const FEISHU_LINK_TOKEN_TTL = 600; // 10 minutes
 
 const SALT_ROUNDS = 12;
 const REDIS_PREFIX = 'register:';
@@ -75,6 +84,10 @@ export class AuthService {
     private readonly userRoleRepo: Repository<UserRole>,
     @Inject('REDIS_CLIENT')
     private readonly redis: Redis,
+    @Inject(forwardRef(() => FeishuClientService))
+    private readonly feishuClientService: FeishuClientService,
+    @Inject(forwardRef(() => FeishuConfigService))
+    private readonly feishuConfigService: FeishuConfigService,
   ) {}
 
   async register(dto: RegisterDto): Promise<{ pendingId: string; message: string }> {
@@ -269,6 +282,180 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.userService.updateRefreshToken(userId, null);
+  }
+
+  // ─── Feishu OAuth ─────────────────────────────────────────────────────────
+
+  async generateFeishuState(tenantSlug: string): Promise<string> {
+    const csrf = randomUUID();
+    const state = await this.jwtService.signAsync(
+      { tenantSlug, csrf },
+      {
+        secret: this.configService.get<string>('auth.jwtSecret') ?? this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '5m',
+      },
+    );
+    await this.redis.set(`${FEISHU_STATE_REDIS_PREFIX}${csrf}`, tenantSlug, 'EX', FEISHU_STATE_TTL);
+    return state;
+  }
+
+  async verifyFeishuState(state: string): Promise<{ tenantSlug: string; csrf: string }> {
+    try {
+      const payload = await this.jwtService.verifyAsync<{ tenantSlug: string; csrf: string }>(state, {
+        secret: this.configService.get<string>('auth.jwtSecret') ?? this.configService.get<string>('JWT_SECRET'),
+      });
+      return payload;
+    } catch {
+      throw new UnauthorizedException('无效或过期的 state');
+    }
+  }
+
+  async getFeishuAuthUrl(tenantSlug: string): Promise<string> {
+    const tenant = await this.tenantService.findBySlug(tenantSlug);
+    if (!tenant) throw new NotFoundException('组织不存在');
+
+    const config = await this.feishuConfigService.getConfig(tenant.id);
+    if (!config || !config.enabled) {
+      throw new BadRequestException('该组织未启用飞书登录');
+    }
+
+    const state = await this.generateFeishuState(tenantSlug);
+    const callbackUrl = this.configService.get<string>('feishu.callbackUrl') ?? '';
+
+    return `https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=${config.appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=contact:user.base:readonly&state=${encodeURIComponent(state)}`;
+  }
+
+  async handleFeishuCallback(
+    tenantSlug: string,
+    code: string,
+  ): Promise<{
+    authResponse?: AuthResponse;
+    needsLinking?: boolean;
+    linkToken?: string;
+    feishuName?: string;
+    matchedEmail?: string;
+  }> {
+    const tenant = await this.tenantService.findBySlug(tenantSlug);
+    if (!tenant) throw new NotFoundException('组织不存在');
+
+    const client = await this.feishuClientService.getClient(tenant.id);
+
+    // Exchange code for user access token
+    const tokenRes = await client.authen.oidcAccessToken.create({
+      data: { grant_type: 'authorization_code', code },
+    });
+
+    const accessToken = (tokenRes as { data?: { access_token?: string } }).data?.access_token;
+    if (!accessToken) {
+      throw new BadRequestException('飞书授权码换取 token 失败');
+    }
+
+    // Get user info
+    const userInfoRes = await client.authen.userInfo.get({
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const feishuUser = (userInfoRes as { data?: Record<string, unknown> }).data ?? {};
+    const openId = feishuUser['open_id'] as string | undefined;
+    const unionId = feishuUser['union_id'] as string | undefined;
+    const feishuName = (feishuUser['name'] as string | undefined) ?? '';
+    const feishuEmail = feishuUser['email'] as string | undefined;
+    const avatarUrl = (feishuUser['avatar_url'] as string | undefined) ?? null;
+
+    if (!openId) {
+      throw new BadRequestException('无法获取飞书用户信息');
+    }
+
+    // 1. Try match by feishuOpenId
+    const existingByOpenId = await this.userService.findByFeishuOpenId(tenant.id, openId);
+    if (existingByOpenId) {
+      const authResponse = await this.generateAuthResponse(existingByOpenId);
+      return { authResponse };
+    }
+
+    // 2. Try match by email
+    if (feishuEmail) {
+      const existingByEmail = await this.userService.findByEmail(tenant.id, feishuEmail);
+      if (existingByEmail) {
+        // Store link info in Redis for confirmation
+        const linkToken = randomUUID();
+        await this.redis.set(
+          `${FEISHU_LINK_TOKEN_PREFIX}${linkToken}`,
+          JSON.stringify({
+            tenantId: tenant.id,
+            userId: existingByEmail.id,
+            openId,
+            unionId: unionId ?? null,
+            avatarUrl,
+            feishuName,
+            feishuEmail,
+          }),
+          'EX',
+          FEISHU_LINK_TOKEN_TTL,
+        );
+        return { needsLinking: true, linkToken, feishuName, matchedEmail: existingByEmail.email };
+      }
+    }
+
+    // 3. Create new user
+    const email = feishuEmail ?? `${openId}@feishu.local`;
+    const newUser = await this.userService.createFromFeishu(tenant.id, {
+      email,
+      name: feishuName || openId,
+      feishuOpenId: openId,
+      feishuUnionId: unionId ?? null,
+      avatarUrl,
+    });
+
+    // Assign employee role
+    const existing = await this.userRoleRepo.findOne({ where: { userId: newUser.id } });
+    if (!existing) {
+      await this.userRoleRepo.save(
+        this.userRoleRepo.create({ userId: newUser.id, roleId: EMPLOYEE_ROLE_ID }),
+      );
+    }
+
+    const authResponse = await this.generateAuthResponse(newUser);
+    return { authResponse };
+  }
+
+  async confirmFeishuLink(
+    linkToken: string,
+    action: 'link' | 'create_new',
+  ): Promise<AuthResponse> {
+    const raw = await this.redis.get(`${FEISHU_LINK_TOKEN_PREFIX}${linkToken}`);
+    if (!raw) throw new BadRequestException('链接令牌已过期，请重新登录');
+
+    const data: {
+      tenantId: string;
+      userId: string;
+      openId: string;
+      unionId: string | null;
+      avatarUrl: string | null;
+      feishuName: string;
+      feishuEmail: string;
+    } = JSON.parse(raw);
+
+    await this.redis.del(`${FEISHU_LINK_TOKEN_PREFIX}${linkToken}`);
+
+    if (action === 'link') {
+      const user = await this.userService.linkFeishu(data.userId, data.openId, data.unionId, data.avatarUrl);
+      return this.generateAuthResponse(user);
+    } else {
+      // Create new account
+      const email = data.feishuEmail ?? `${data.openId}@feishu.local`;
+      const newUser = await this.userService.createFromFeishu(data.tenantId, {
+        email,
+        name: data.feishuName || data.openId,
+        feishuOpenId: data.openId,
+        feishuUnionId: data.unionId,
+        avatarUrl: data.avatarUrl,
+      });
+      await this.userRoleRepo.save(
+        this.userRoleRepo.create({ userId: newUser.id, roleId: EMPLOYEE_ROLE_ID }),
+      );
+      return this.generateAuthResponse(newUser);
+    }
   }
 
   private async generateTokens(user: User): Promise<TokenPair> {

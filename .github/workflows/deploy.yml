@@ -41,12 +41,13 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FEISHU_ENCRYPT_KEY: ${{ secrets.FEISHU_ENCRYPT_KEY }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,LLM_API_KEY,SMTP_PASS
+          envs: DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,LLM_API_KEY,RESEND_API_KEY,FEISHU_ENCRYPT_KEY
           command_timeout: 45m
           script: |
             set -e
@@ -96,10 +97,7 @@ jobs:
             JWT_REFRESH_EXPIRES_IN=7d
             LLM_MODEL=claude-sonnet-4-6
             LLM_TEMPERATURE=0.3
-            SMTP_HOST=smtp.resend.com
-            SMTP_PORT=465
-            SMTP_USER=resend
-            EMAIL_FROM=AI积分平台 <onboarding@resend.dev>
+            EMAIL_FROM=AI积分平台 <noreply@godpenai.com>
             UPLOAD_DIR=./uploads
             MAX_FILE_SIZE_MB=10
             ENVEOF
@@ -108,7 +106,9 @@ jobs:
             printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> .env
             printf 'JWT_REFRESH_SECRET=%s\n' "$JWT_REFRESH_SECRET" >> .env
             printf 'LLM_API_KEY=%s\n' "$LLM_API_KEY" >> .env
-            printf 'SMTP_PASS=%s\n' "$SMTP_PASS" >> .env
+            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY" >> .env
+            printf 'FEISHU_ENCRYPT_KEY=%s\n' "$FEISHU_ENCRYPT_KEY" >> .env
+            printf 'FEISHU_CALLBACK_URL=https://points.godpenai.com/api/auth/feishu/callback\n' >> .env
 
             # Start / update all services (images already built above)
             sudo docker compose -f docker-compose.prod.yml up -d --remove-orphans --pull never
