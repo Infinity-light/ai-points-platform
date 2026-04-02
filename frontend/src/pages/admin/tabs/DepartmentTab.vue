@@ -228,7 +228,7 @@ onMounted(() => {
 
 <!-- Recursive tree node component -->
 <script lang="ts">
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type VNode } from 'vue';
 
 interface TreeNode {
   id: string;
@@ -247,8 +247,8 @@ export const DeptTreeNode = defineComponent({
     depth: { type: Number, default: 0 },
   },
   emits: ['toggle', 'select'],
-  setup(props, { emit }) {
-    return () => {
+  setup(props, { emit }): () => VNode {
+    return (): VNode => {
       const node = props.node;
       const hasChildren = (node.children?.length ?? 0) > 0;
       const isExpanded = props.expandedIds.has(node.id);
@@ -282,7 +282,7 @@ export const DeptTreeNode = defineComponent({
         ],
       );
 
-      const children =
+      const children: VNode | null =
         isExpanded && hasChildren
           ? h(
               'div',
