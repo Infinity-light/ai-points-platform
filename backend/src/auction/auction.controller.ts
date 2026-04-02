@@ -13,7 +13,7 @@ import { IsInt, IsUUID, IsNotEmpty, IsString, IsOptional, IsDateString, Min } fr
 import { Type } from 'class-transformer';
 import { AuctionService } from './auction.service';
 import type { AuctionFilters } from './auction.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -58,7 +58,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('auctions')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 export class AuctionController {
   constructor(private readonly auctionService: AuctionService) {}
 

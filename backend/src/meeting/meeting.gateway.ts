@@ -11,7 +11,7 @@ import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { MeetingService, CastVoteDto, ContributionEntry } from './meeting.service';
+import { MeetingService, ContributionEntry } from './meeting.service';
 
 interface AuthSocket extends Socket {
   userId: string;
@@ -115,7 +115,7 @@ export class MeetingGateway implements OnGatewayConnection, OnGatewayDisconnect 
   @SubscribeMessage('vote')
   async handleVote(
     @ConnectedSocket() client: AuthSocket,
-    @MessageBody() data: { meetingId: string; taskId: string } & CastVoteDto,
+    @MessageBody() data: { meetingId: string; taskId: string; points: number },
   ): Promise<void> {
     try {
       const stats = await this.meetingService.castVote({
@@ -123,7 +123,7 @@ export class MeetingGateway implements OnGatewayConnection, OnGatewayDisconnect 
         taskId: data.taskId,
         userId: client.userId,
         tenantId: client.tenantId,
-        dto: { isApproval: data.isApproval, score: data.score },
+        dto: { points: data.points },
       });
       const roomId = `meeting:${data.meetingId}`;
       this.server.to(roomId).emit('meeting:stats', {
@@ -168,14 +168,13 @@ export class MeetingGateway implements OnGatewayConnection, OnGatewayDisconnect 
   @SubscribeMessage('confirm')
   async handleConfirm(
     @ConnectedSocket() client: AuthSocket,
-    @MessageBody() data: { meetingId: string; taskId: string; aiTotalScore: number },
+    @MessageBody() data: { meetingId: string; taskId: string },
   ): Promise<void> {
     try {
       const result = await this.meetingService.confirmTask({
         meetingId: data.meetingId,
         taskId: data.taskId,
         tenantId: client.tenantId,
-        aiTotalScore: data.aiTotalScore,
       });
       const roomId = `meeting:${data.meetingId}`;
       this.server.to(roomId).emit('meeting:confirmed', {

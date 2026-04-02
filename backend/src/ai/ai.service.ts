@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
+import { AiProviderService } from '../ai-config/ai-provider.service';
 
 export interface TaskScoreResult {
   research: number;
@@ -47,7 +48,10 @@ export class AiService {
   private readonly model: string;
   private readonly temperature: number;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly aiProviderService: AiProviderService,
+  ) {
     this.client = new Anthropic({
       apiKey: this.configService.get<string>('ai.apiKey') ?? this.configService.get<string>('LLM_API_KEY') ?? '',
       baseURL: this.configService.get<string>('ai.baseUrl') ?? this.configService.get<string>('LLM_BASE_URL'),
@@ -56,13 +60,22 @@ export class AiService {
     this.temperature = this.configService.get<number>('ai.temperature') ?? 0.3;
   }
 
-  async reviewSubmission(input: ReviewInput): Promise<TaskScoreResult> {
+  async reviewSubmission(input: ReviewInput, tenantId?: string): Promise<TaskScoreResult> {
     const userMessage = this.buildUserMessage(input);
+
+    let client = this.client;
+    let model = this.model;
+
+    if (tenantId) {
+      const resolved = await this.resolveClientForTenant(tenantId);
+      client = resolved.client;
+      model = resolved.model;
+    }
 
     // Call LLM 3 times; collect only successful results
     const rawScores: Array<{ research: number; planning: number; execution: number }> = [];
     for (let i = 0; i < 3; i++) {
-      const score = await this.callLlmOnce(userMessage);
+      const score = await this.callLlmOnce(userMessage, client, model);
       if (score !== null) {
         rawScores.push(score);
       }
@@ -79,6 +92,28 @@ export class AiService {
     const average = Math.round(((research + planning + execution) / 3) * 10) / 10;
 
     return { research, planning, execution, average, rawScores };
+  }
+
+  private async resolveClientForTenant(
+    tenantId: string,
+  ): Promise<{ client: Anthropic; model: string }> {
+    const providers = await this.aiProviderService.list(tenantId);
+    const provider = providers.find((p) => p.type === 'anthropic' && p.isActive);
+
+    if (provider) {
+      const key = await this.aiProviderService.getActiveKey(tenantId, provider.id);
+      if (key) {
+        return {
+          client: new Anthropic({
+            apiKey: key.encryptedKey,
+            baseURL: provider.baseUrl ?? undefined,
+          }),
+          model: key.model ?? this.model,
+        };
+      }
+    }
+
+    return { client: this.client, model: this.model };
   }
 
   private buildUserMessage(input: ReviewInput): string {
@@ -102,10 +137,12 @@ ${input.submissionContent}
 
   private async callLlmOnce(
     userMessage: string,
+    client?: Anthropic,
+    model?: string,
   ): Promise<{ research: number; planning: number; execution: number } | null> {
     try {
-      const response = await this.client.messages.create({
-        model: this.model,
+      const response = await (client ?? this.client).messages.create({
+        model: model ?? this.model,
         max_tokens: 100,
         temperature: this.temperature,
         system: SCORING_PROMPT,

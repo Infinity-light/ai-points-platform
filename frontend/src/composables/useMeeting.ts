@@ -104,7 +104,7 @@ export function useMeeting(meetingId: string) {
     socket.value?.emit('focus', { meetingId, taskId });
   }
 
-  function emitVote(opts: { taskId: string; isApproval: boolean; score?: number }): void {
+  function emitVote(opts: { taskId: string; points: number }): void {
     socket.value?.emit('vote', { meetingId, ...opts });
   }
 
@@ -112,7 +112,7 @@ export function useMeeting(meetingId: string) {
     socket.value?.emit('contribution', { meetingId, ...opts });
   }
 
-  function emitConfirm(opts: { taskId: string; aiTotalScore: number }): void {
+  function emitConfirm(opts: { taskId: string }): void {
     socket.value?.emit('confirm', { meetingId, ...opts });
   }
 

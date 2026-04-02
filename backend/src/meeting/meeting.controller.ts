@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { IsUUID, IsNotEmpty, IsOptional } from 'class-validator';
 import { MeetingService } from './meeting.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -27,7 +27,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('meetings')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 export class MeetingController {
   constructor(private readonly meetingService: MeetingService) {}
 

@@ -55,7 +55,7 @@ export class TaskService {
       createdBy,
       title: dto.title,
       description: dto.description ?? null,
-      estimatedPoints: dto.estimatedPoints ?? null,
+      estimatedPoints: null,
       status: TaskStatus.OPEN,
       metadata: dto.metadata ?? {},
     });
@@ -79,7 +79,7 @@ export class TaskService {
     const task = await this.findOne(id, tenantId);
     if (dto.title !== undefined) task.title = dto.title;
     if (dto.description !== undefined) task.description = dto.description ?? null;
-    if (dto.estimatedPoints !== undefined) task.estimatedPoints = dto.estimatedPoints ?? null;
+    // estimatedPoints no longer set from DTO — determined by review meeting
     if (dto.metadata !== undefined) {
       task.metadata = { ...task.metadata, ...dto.metadata };
     }

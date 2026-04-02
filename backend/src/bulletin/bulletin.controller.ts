@@ -9,7 +9,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { BulletinService } from './bulletin.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 class PaginationQuery {
@@ -33,7 +33,7 @@ interface RequestWithUser extends Request {
 // ── Authenticated routes ──────────────────────────────────────────────────────
 
 @Controller('bulletin')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class BulletinController {
   constructor(private readonly bulletinService: BulletinService) {}
 

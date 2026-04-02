@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Delete,
+  Put,
   Body,
   Param,
   UseGuards,
@@ -14,7 +15,8 @@ import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateCustomFieldsDto } from './dto/update-custom-fields.dto';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -24,7 +26,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('projects')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
@@ -89,5 +91,21 @@ export class ProjectController {
     @Request() req: RequestWithUser,
   ) {
     return this.projectService.removeMember(id, req.user.tenantId, userId);
+  }
+
+  @Get(':id/custom-fields')
+  @CheckPolicies('projects', 'read')
+  getCustomFields(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.projectService.getCustomFields(id, req.user.tenantId);
+  }
+
+  @Put(':id/custom-fields')
+  @CheckPolicies('projects', 'update')
+  updateCustomFields(
+    @Param('id') id: string,
+    @Body() dto: UpdateCustomFieldsDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.projectService.updateCustomFields(id, req.user.tenantId, dto.fields);
   }
 }

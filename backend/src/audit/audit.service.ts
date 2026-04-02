@@ -26,6 +26,7 @@ export interface RecordAuditOptions {
   previousData?: Record<string, unknown>;
   newData?: Record<string, unknown>;
   ipAddress?: string;
+  source?: string;
 }
 
 @Injectable()
@@ -46,6 +47,7 @@ export class AuditService {
       previousData: options.previousData ?? null,
       newData: options.newData ?? null,
       ipAddress: options.ipAddress ?? null,
+      source: options.source ?? 'jwt',
     });
 
     await this.auditLogRepo.save(log);

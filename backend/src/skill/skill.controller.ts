@@ -7,7 +7,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { SkillService } from './skill.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
@@ -15,7 +15,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(CompositeAuthGuard)
 export class SkillController {
   constructor(private readonly skillService: SkillService) {}
 

@@ -8,7 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { SettlementService } from './settlement.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CompositeAuthGuard } from '../auth/guards/composite-auth.guard';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -25,7 +25,7 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('settlements')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(CompositeAuthGuard, PoliciesGuard)
 export class SettlementController {
   constructor(private readonly settlementService: SettlementService) {}
 

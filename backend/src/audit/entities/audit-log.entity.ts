@@ -41,6 +41,9 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 100, nullable: true })
   ipAddress!: string | null;
 
+  @Column({ type: 'varchar', length: 20, default: 'jwt' })
+  source!: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

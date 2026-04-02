@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project, ProjectStatus, AnnealingConfig, SettlementConfig } from './entities/project.entity';
+import { Project, ProjectStatus, AnnealingConfig, SettlementConfig, FieldDef } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -156,5 +157,25 @@ export class ProjectService {
     const project = await this.findOne(id, tenantId);
     project.settlementRound = project.settlementRound + 1;
     return this.projectRepository.save(project);
+  }
+
+  async getCustomFields(projectId: string, tenantId: string): Promise<FieldDef[]> {
+    const project = await this.findOne(projectId, tenantId);
+    return project.metadata?.customFields ?? [];
+  }
+
+  async updateCustomFields(
+    projectId: string,
+    tenantId: string,
+    fields: FieldDef[],
+  ): Promise<FieldDef[]> {
+    const keys = fields.map((f) => f.key);
+    if (new Set(keys).size !== keys.length) {
+      throw new BadRequestException('customFields 中存在重复的 key');
+    }
+    const project = await this.findOne(projectId, tenantId);
+    project.metadata = { ...project.metadata, customFields: fields };
+    await this.projectRepository.save(project);
+    return fields;
   }
 }

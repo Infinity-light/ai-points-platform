@@ -32,8 +32,7 @@ const endLoading = ref(false);
 const isLead = ref(false);
 
 // 投票面板状态
-const voteMode = ref<'approval' | 'custom'>('approval');
-const customScore = ref<number | null>(null);
+const votePoints = ref<number | null>(null);
 const voteLoading = ref(false);
 const voteError = ref('');
 
@@ -135,8 +134,7 @@ function focusTask(index: number): void {
     emitFocus(task.id);
   }
   // 重置投票面板
-  voteMode.value = 'approval';
-  customScore.value = null;
+  votePoints.value = null;
   voteError.value = '';
   contributionMode.value = false;
 }
@@ -154,8 +152,8 @@ function nextTask(): void {
 // ─── 投票 ────────────────────────────────────────────────────────────────────
 async function castVote(): Promise<void> {
   if (!currentTask.value) return;
-  if (voteMode.value === 'custom' && (!customScore.value || customScore.value <= 0)) {
-    voteError.value = '请输入大于 0 的自定义分数';
+  if (votePoints.value === null || votePoints.value < 0) {
+    voteError.value = '请输入非负整数工分';
     return;
   }
   voteLoading.value = true;
@@ -163,8 +161,7 @@ async function castVote(): Promise<void> {
   try {
     emitVote({
       taskId: currentTask.value.id,
-      isApproval: voteMode.value === 'approval',
-      score: voteMode.value === 'custom' ? (customScore.value ?? undefined) : undefined,
+      points: Math.round(votePoints.value),
     });
   } catch {
     voteError.value = '投票失败，请重试';
@@ -176,14 +173,9 @@ async function castVote(): Promise<void> {
 // ─── 确认任务 ────────────────────────────────────────────────────────────────
 function confirmAndNext(): void {
   if (!currentTask.value || !isLead.value) return;
-  const aiScores = currentTask.value.metadata?.aiScores;
-  const aiTotal = aiScores
-    ? aiScores.research + aiScores.planning + aiScores.execution
-    : 10;
 
   emitConfirm({
     taskId: currentTask.value.id,
-    aiTotalScore: aiTotal,
   });
 
   // 自动前进到下一个未确认任务
@@ -448,33 +440,17 @@ function statusLabel(confirmed: boolean): string {
 
             <!-- 投票区（未确认时显示） -->
             <div v-if="!isCurrentConfirmed && meeting.status === 'open'" class="glass-card p-4">
-              <h4 class="text-sm font-medium text-foreground mb-3">投票</h4>
+              <h4 class="text-sm font-medium text-foreground mb-3">投出工分</h4>
 
-              <div class="flex gap-2 mb-3">
-                <button
-                  class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="voteMode === 'approval' ? 'bg-primary text-primary-foreground' : 'bg-white/10 text-muted-foreground hover:bg-white/15'"
-                  @click="voteMode = 'approval'"
-                >
-                  认可 AI 分
-                </button>
-                <button
-                  class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="voteMode === 'custom' ? 'bg-amber-500/80 text-white' : 'bg-white/10 text-muted-foreground hover:bg-white/15'"
-                  @click="voteMode = 'custom'"
-                >
-                  自定义分数
-                </button>
-              </div>
-
-              <div v-if="voteMode === 'custom'" class="mb-3">
+              <div class="mb-3">
                 <input
-                  v-model.number="customScore"
+                  v-model.number="votePoints"
                   type="number"
-                  min="0.01"
-                  step="0.5"
-                  placeholder="输入分数（无上限）"
+                  min="0"
+                  step="1"
+                  placeholder="你认为这个任务值多少工分？"
                   class="w-full px-3 py-2 bg-white/5 border border-white/15 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60"
+                  @keyup.enter="castVote"
                 />
               </div>
 
@@ -482,33 +458,20 @@ function statusLabel(confirmed: boolean): string {
 
               <button
                 class="w-full py-2 bg-primary/90 hover:bg-primary text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                :disabled="voteLoading"
+                :disabled="voteLoading || votePoints === null"
                 @click="castVote"
               >
                 {{ voteLoading ? '提交中...' : '提交投票' }}
               </button>
 
-              <!-- 实时统计条 -->
+              <!-- 实时统计 -->
               <div v-if="currentStats" class="mt-3 pt-3 border-t border-white/10">
                 <div class="text-xs text-muted-foreground mb-2">当前投票统计</div>
                 <div class="flex items-center gap-3 text-sm">
-                  <span class="text-green-400">认可 {{ currentStats.approvalCount }}</span>
-                  <span class="text-amber-400">异议 {{ currentStats.challengeCount }}</span>
                   <span class="text-muted-foreground">共 {{ currentStats.voteCount }} 票</span>
                   <span v-if="currentStats.medianScore !== null" class="text-foreground ml-auto">
-                    中位分 {{ currentStats.medianScore }}
+                    中位工分 {{ currentStats.medianScore }}
                   </span>
-                </div>
-                <div
-                  v-if="currentStats.voteCount > 0"
-                  class="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden"
-                >
-                  <div
-                    class="h-full bg-green-500 rounded-full transition-all"
-                    :style="{
-                      width: Math.round((currentStats.approvalCount / currentStats.voteCount) * 100) + '%'
-                    }"
-                  />
                 </div>
               </div>
             </div>
