@@ -34,23 +34,22 @@ ai-points-platform/
 │   │   ├── user/            # 用户、角色、权限 Guard
 │   │   ├── project/         # 项目 CRUD、成员管理、退火/结算配置
 │   │   ├── task/            # 任务表、状态机、CRUD
-│   │   ├── ai/              # LLM API 封装、Prompt 模板、三次调用取均值
+│   │   ├── ai/              # LLM API 封装、Prompt 模板、三次调用取均值、多字段文本提取
 │   │   ├── submission/      # 提交记录、三种类型处理
 │   │   ├── vote/            # 投票会话、加权投票计算
 │   │   ├── points/          # 工分记录、退火计算、/points/my-summary API
 │   │   ├── settlement/      # 结算触发、退火重算、分红事件
 │   │   ├── brain/           # 智脑对话、SSE 流式输出
 │   │   ├── notification/    # 站内通知
-│   │   ├── invite/          # 邀请码管理
 │   │   ├── admin/           # 统一管理后台 API（含用户管理、租户设置）
 │   │   ├── super-admin/     # 超管 API（租户、全局配置）
 │   │   ├── rbac/            # 动态角色权限（CASL + DB 驱动，替代旧 RolesGuard）
 │   │   ├── audit/           # 审计日志（全局拦截器 + 查询 API）
-│   │   ├── meeting/         # 实时评审会议（Socket.IO + 投票 + 结算触发）
+│   │   ├── meeting/         # 实时评审会议（Socket.IO + 投票 + 自动结算）
 │   │   ├── auction/         # 通用竞拍引擎（Bull 延迟任务 + 事件驱动）
 │   │   ├── bulletin/        # 公示区（工分排行/账目/决策/审计，支持公开模式）
 │   │   ├── ai-config/       # AI 配置中心（LLM 源 Key 轮询池 + Open API Key 管理）
-│   │   ├── feishu/          # 飞书集成（OAuth、通讯录同步、Webhook、配置管理）
+│   │   ├── feishu/          # 飞书集成（OAuth、通讯录同步、Webhook、Bitable 双向同步）
 │   │   ├── department/      # 部门管理（飞书同步只读）
 │   │   ├── upload/          # 文件上传
 │   │   └── webhook/         # Git Webhook 接收
@@ -100,15 +99,17 @@ tier >= maxSteps 时清零
 - 部分失败：跳过失败结果，用成功结果均值
 - 全部失败：抛出异常，任务重新入队
 - Prompt 不传提交人姓名以去主观化
+- **多字段输入（v4）**：`ReviewInput` 支持 `attachmentTexts`（附件文本提取）和 `commitDiffSummary`（代码变更摘要），`TextExtractorService` 处理 PDF/DOCX 文本提取（pdf-parse + mammoth）
 
-**评审会议（v3）**：AI 评分后进入 `PENDING_REVIEW` 状态，由项目负责人开启实时评审会议（Socket.IO），团队逐条审核：
+**评审会议（v4 — 会议即审批）**：AI 评分后进入 `PENDING_REVIEW` 状态，由项目负责人开启实时评审会议（Socket.IO），团队逐条审核：
 - 每个参会者直接投一个工分数（正整数，无上限），代表"我认为这个任务值 X 工分"
 - AI 三维评分作为参考信息展示，不参与计算
 - 最终工分 = 所有参会者投分的中位数
 - 多人任务：按百分比分配（不要求合计 100%）
-- 会议结束自动触发结算
+- **会议结束 → 自动结算 → 工分直接 APPROVED**（事件驱动：`meeting.closed` → `MeetingSettlementListener` → `settleFromMeeting()`）
+- 取消了单独的工分审批步骤，会议即审批
 
-**结算积分公式**：`finalPoints = 评审会议投票中位数`（v3 简化，不再有 estimatedPoints 乘法公式）。任务创建时无需填写预估工分。
+**结算积分公式**：`finalPoints = 评审会议投票中位数`（v3 简化，不再有 estimatedPoints 乘法公式）。任务创建时无需填写预估工分。结算完成后发射 `settlement.completed` 事件，触发飞书回写。
 
 ### 动态角色权限（RBAC）
 
@@ -140,7 +141,7 @@ tier >= maxSteps 时清零
 **入站配置（Open API）**：
 - `open_api_keys` 表：平台 Open API Key（SHA-256 hash 存储，原文仅创建时返回一次）
 - Key 绑定到创建者用户，继承其角色权限
-- 管理后台「AI 配置」Tab 统一管理
+- 独立页面 `/ai-config` 管理（从管理后台拆出）
 
 ### Open API 鉴权（CompositeAuthGuard）
 
@@ -159,6 +160,60 @@ tier >= maxSteps 时清零
 - 自定义列：项目负责人可添加自定义列（文本/数字/日期/单选/多选），定义存 `project.metadata.customFields`，值存 `task.metadata[key]`
 - 底部新建行：输入标题 Enter 创建任务
 - VxeTable 暗色主题通过 CSS 变量覆盖适配
+
+### 飞书 Bitable 深度双向同步
+
+「飞书为主、平台为辅」——日常任务管理在飞书多维表格，平台处理飞书做不了的事（多人贡献分配、AI 多字段评分、退火结算），结果回写飞书。
+
+**核心数据流**：
+```
+项目创建 → 自动创建飞书 Bitable（标准字段）
+飞书表编辑 → Webhook → 平台同步任务
+平台任务变更 → 事件驱动 → 同步到飞书
+评审会议结束 → 自动结算 → 最终工分回写飞书（number 字段）
+```
+
+**关键组件**：
+- `FeishuBitableSyncService`：全量同步、增量同步、回写
+- `FeishuBitableController`：`/projects/:projectId/bitable/*` API（fetch-fields、binding CRUD、sync）
+- `FeishuBitableSyncProcessor`：Bull 队列处理全量同步任务
+- `FeishuWebhookListener`：`@OnEvent('feishu.webhook')` 统一路由通讯录和 Bitable 事件
+- `FeishuBitableWritebackListener`：`@OnEvent('settlement.completed')` 触发回写
+- `ProjectBitableListener`：`@OnEvent('project.created')` 自动创建飞书表
+- `TaskFeishuSyncListener`：`@OnEvent('task.created/updated')` 平台→飞书同步
+
+**数据表**：
+- `feishu_bitable_bindings`：项目↔飞书表绑定（appToken、tableId、fieldMapping JSONB、writebackFieldId）
+- `feishu_bitable_records`：飞书行↔平台任务映射（防重复同步）
+- `tasks.feishuRecordId`：任务关联的飞书行 record_id
+
+**前端**：
+- 项目详情页「飞书表格」Tab：绑定配置 + 字段映射 + 同步状态 + iframe 嵌入飞书表
+- 「在飞书中查看」快捷链接（任务工具栏）
+
+### 事件驱动架构
+
+系统通过 `@nestjs/event-emitter` 的 `EventEmitter2` 解耦模块间通信，避免循环依赖：
+
+| 事件 | 发射方 | 监听方 | 作用 |
+|------|--------|--------|------|
+| `meeting.closed` | MeetingService | MeetingSettlementListener | 会议关闭→自动结算 |
+| `settlement.completed` | SettlementService | FeishuBitableWritebackListener | 结算→回写飞书 |
+| `project.created` | ProjectService | ProjectBitableListener | 项目创建→自动创建飞书表 |
+| `task.created` | TaskService | TaskFeishuSyncListener | 任务创建→同步到飞书 |
+| `task.updated` | TaskService | TaskFeishuSyncListener | 任务更新→同步到飞书 |
+| `feishu.webhook` | FeishuWebhookController | FeishuWebhookListener | 飞书回调→路由到对应处理器 |
+| `auction.closed` | AuctionService | TaskAuctionListener | 竞拍结束→分配任务 |
+
+### 管理后台结构
+
+管理后台从 12 Tab 单页拆分为多个独立页面：
+
+| 页面 | 路由 | 权限 | 内容 |
+|------|------|------|------|
+| 飞书集成 | `/feishu-config` | `feishu:manage` | 飞书应用配置、角色映射、通讯录同步 |
+| AI 配置 | `/ai-config` | `config:update` | LLM 源管理、Key 池、Open API Key |
+| 管理后台 | `/admin` | 按 Tab 各自权限 | 用户管理、权限矩阵、部门管理、审计日志 + super_admin: 租户、全局配置、运营数据、公示区 |
 
 ### CI/CD — server-build 策略
 
@@ -184,7 +239,7 @@ tier >= maxSteps 时清零
 
 ### auth 模块
 
-- 注册：`POST /auth/register`，需要 `tenantSlug`、`email`、`password`、`name`，可选 `inviteCode`
+- 注册：`POST /auth/register`，需要 `tenantSlug`、`email`、`password`、`name`
 - 邮箱验证：`POST /auth/verify-email`
 - 登录：`POST /auth/login`，需要 `tenantSlug`、`email`、`password`，返回 JWT access + refresh token
 - 刷新：`POST /auth/refresh`（需 refresh token）
@@ -235,14 +290,16 @@ tier >= maxSteps 时清零
 ### feishu 模块
 
 飞书集成核心模块，封装飞书开放平台 API 交互：
-- **配置管理**：`GET/POST /feishu-config`（租户级，App Secret AES-256-GCM 加密存储）
+- **配置管理**：`GET/POST /feishu-config`（租户级，App Secret AES-256-GCM 加密存储）、独立页面 `/feishu-config`
 - **连接测试**：`POST /feishu-config/test-connection`
 - **角色映射**：`GET/POST/DELETE /feishu-config/role-mappings`（飞书职位→平台角色）
 - **通讯录同步**：`POST /feishu-config/sync`（Bull 异步全量同步）、`GET /feishu-config/sync-logs`
-- **Webhook**：`POST /feishu-webhook/:tenantId`（@Public，飞书事件回调 + challenge 验证）
-- 飞书 SDK：`@larksuiteoapi/node-sdk`，Client 实例按租户缓存在内存 Map（2h TTL）
+- **Webhook**：`POST /feishu-webhook/:tenantId`（@Public，飞书事件回调 + challenge 验证）→ `FeishuWebhookListener` 统一路由
+- **Bitable 双向同步**：`/projects/:projectId/bitable/*`（绑定配置、全量同步、增量同步、结算回写）
+- 飞书 SDK：`@larksuiteoapi/node-sdk`，Client 实例按租户缓存在内存 Map（5min TTL）
 - 离职用户自动分配 `resigned` 角色（UUID `00000000-0000-0000-0000-000000000007`，只读权限）
-- 所有管理接口需 `config:manage` 权限
+- 所有管理接口需 `feishu:manage` 权限
+- **已移除**：`FeishuDeviceFlowService`（调用不存在的 API，改为引导手动配置）
 
 ### department 模块
 
@@ -256,7 +313,9 @@ tier >= maxSteps 时清零
 - 创建：`POST /meetings`（需 votes:create 权限）
 - Socket.IO Gateway：namespace `/meeting`，JWT 认证
 - 事件：join/focus/vote/contribution/confirm/end
-- 会议结束自动触发 `SettlementService.settleFromMeeting()`
+- 会议关闭时发射 `meeting.closed` 事件 → `MeetingSettlementListener` 自动调用 `settleFromMeeting()`
+- 工分直接写为 `APPROVED`（取消了 `PROJECT_ONLY` → 审批 → `APPROVED` 的两步流程）
+- **已移除**：`PointApprovalBatch` 实体和管理后台审批端点
 
 ### auction 模块
 
