@@ -95,10 +95,11 @@ function toggleCard(key: string) {
 const copiedWebhook = ref(false);
 const copiedToken = ref(false);
 
-async function copyText(text: string, flag: typeof copiedWebhook) {
+async function copyToClipboard(text: string, which: 'webhook' | 'token' | 'scope') {
   await navigator.clipboard.writeText(text);
-  flag.value = true;
-  setTimeout(() => { flag.value = false; }, 2000);
+  if (which === 'webhook') { copiedWebhook.value = true; setTimeout(() => { copiedWebhook.value = false; }, 2000); }
+  else if (which === 'token') { copiedToken.value = true; setTimeout(() => { copiedToken.value = false; }, 2000); }
+  else { copiedWebhook.value = true; setTimeout(() => { copiedWebhook.value = false; }, 2000); }
 }
 
 // ─── Data loading ────────────────────────────────────────────────────────────
@@ -557,7 +558,7 @@ watch(wizardStep, (step) => {
             <code class="text-xs font-mono text-foreground flex-1">{{ typeof scope === 'string' ? scope : scope.scope }}</code>
             <button
               class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              @click="copyText(typeof scope === 'string' ? scope : scope.scope, copiedWebhook)"
+              @click="copyToClipboard(typeof scope === 'string' ? scope : scope.scope, 'scope')"
             >
               <Copy class="w-3.5 h-3.5" />
             </button>
@@ -886,7 +887,7 @@ watch(wizardStep, (step) => {
               <label class="block text-xs text-muted-foreground mb-1">Webhook URL</label>
               <div class="flex items-center gap-2 bg-background border border-border rounded px-2 py-1.5">
                 <code class="flex-1 text-xs font-mono text-foreground break-all select-all">{{ config?.webhookUrl }}</code>
-                <button class="shrink-0 cursor-pointer" @click="copyText(config?.webhookUrl ?? '', copiedWebhook)">
+                <button class="shrink-0 cursor-pointer" @click="copyToClipboard(config?.webhookUrl ?? '', 'webhook')">
                   <Check v-if="copiedWebhook" class="w-3.5 h-3.5 text-green-400" />
                   <Copy v-else class="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
@@ -896,7 +897,7 @@ watch(wizardStep, (step) => {
               <label class="block text-xs text-muted-foreground mb-1">Verify Token</label>
               <div class="flex items-center gap-2 bg-background border border-border rounded px-2 py-1.5">
                 <code class="flex-1 text-xs font-mono text-foreground break-all select-all">{{ config?.webhookVerifyToken }}</code>
-                <button class="shrink-0 cursor-pointer" @click="copyText(config?.webhookVerifyToken ?? '', copiedToken)">
+                <button class="shrink-0 cursor-pointer" @click="copyToClipboard(config?.webhookVerifyToken ?? '', 'token')">
                   <Check v-if="copiedToken" class="w-3.5 h-3.5 text-green-400" />
                   <Copy v-else class="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
