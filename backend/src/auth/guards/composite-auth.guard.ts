@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -37,6 +37,14 @@ export class CompositeAuthGuard implements CanActivate {
     }
 
     // Fallback to API key
-    return this.apiKeyGuard.canActivate(context);
+    try {
+      const ok = await this.apiKeyGuard.canActivate(context);
+      if (ok) return true;
+    } catch {
+      // API key also failed
+    }
+
+    // Both methods failed — throw 401 so frontend can auto-refresh JWT
+    throw new UnauthorizedException();
   }
 }

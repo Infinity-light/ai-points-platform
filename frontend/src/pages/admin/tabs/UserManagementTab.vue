@@ -47,12 +47,20 @@ async function loadRoles() {
 }
 
 async function updateTenantRole(userId: string, roleId: string) {
+  if (!roleId) return;
   roleUpdateLoading.value[userId] = true;
   usersError.value = '';
   try {
     await rbacApi.assignTenantRole(userId, roleId);
-  } catch {
-    usersError.value = '更新角色失败，请重试';
+    // Update local state
+    const user = users.value.find((u) => u.id === userId);
+    if (user) {
+      user.tenantRoleId = roleId;
+      user.tenantRoleName = tenantRoles.value.find((r) => r.id === roleId)?.name ?? null;
+    }
+  } catch (err: unknown) {
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    usersError.value = msg ? `更新角色失败：${Array.isArray(msg) ? msg.join(', ') : msg}` : '更新角色失败，请重试';
   } finally {
     roleUpdateLoading.value[userId] = false;
   }
@@ -172,6 +180,9 @@ onMounted(() => {
                   class="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 transition-colors duration-200 cursor-pointer"
                   @change="updateTenantRole(user.id, ($event.target as HTMLSelectElement).value)"
                 >
+                  <option v-if="!user.tenantRoleId" value="" disabled>
+                    请选择角色
+                  </option>
                   <option
                     v-for="role in tenantRoles"
                     :key="role.id"
@@ -179,7 +190,6 @@ onMounted(() => {
                   >
                     {{ role.name }}
                   </option>
-                  <option v-if="tenantRoles.length === 0" value="">--</option>
                 </select>
               </td>
               <td class="py-3 pr-4 font-mono text-muted-foreground">
