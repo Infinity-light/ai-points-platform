@@ -1,4 +1,6 @@
-import { IsString, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, Matches, MaxLength } from 'class-validator';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class CreateRoleMappingDto {
   @IsString()
@@ -6,6 +8,6 @@ export class CreateRoleMappingDto {
   @MaxLength(100)
   feishuRoleName!: string;
 
-  @IsUUID()
+  @Matches(UUID_PATTERN, { message: 'platformRoleId must be a valid UUID' })
   platformRoleId!: string;
 }

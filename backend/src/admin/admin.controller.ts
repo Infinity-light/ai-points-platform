@@ -18,7 +18,9 @@ import { CurrentTenant } from '../tenant/decorators/tenant.decorator';
 import { PointsService } from '../points/points.service';
 import { TenantService } from '../tenant/tenant.service';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { IsOptional, IsString, IsUUID, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, Matches, IsBoolean } from 'class-validator';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class RejectBatchDto {
   @IsOptional()
@@ -27,7 +29,7 @@ class RejectBatchDto {
 }
 
 class UpdateUserRoleDto {
-  @IsUUID()
+  @Matches(UUID_PATTERN, { message: 'roleId must be a valid UUID' })
   roleId!: string;
 }
 
