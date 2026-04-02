@@ -7,8 +7,6 @@ import { AuthController } from './auth.controller';
 import { EmailService } from './email.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { ApiKeyGuard } from './guards/api-key.guard';
 import { CompositeAuthGuard } from './guards/composite-auth.guard';
 import { UserModule } from '../user/user.module';
 import { TenantModule } from '../tenant/tenant.module';
@@ -25,7 +23,7 @@ import { UserRole } from '../rbac/entities/user-role.entity';
     AiConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailService, JwtStrategy, JwtRefreshStrategy, JwtAuthGuard, ApiKeyGuard, CompositeAuthGuard],
-  exports: [AuthService, JwtStrategy, JwtAuthGuard, ApiKeyGuard, CompositeAuthGuard],
+  providers: [AuthService, EmailService, JwtStrategy, JwtRefreshStrategy, CompositeAuthGuard],
+  exports: [AuthService, JwtStrategy, CompositeAuthGuard],
 })
 export class AuthModule {}
