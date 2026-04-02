@@ -27,6 +27,7 @@ import { AuditModule } from './audit/audit.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { AuctionModule } from './auction/auction.module';
 import { BulletinModule } from './bulletin/bulletin.module';
+import { AiConfigModule } from './ai-config/ai-config.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
@@ -66,6 +67,7 @@ import aiConfig from './config/ai.config';
     MeetingModule,
     AuctionModule,
     BulletinModule,
+    AiConfigModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

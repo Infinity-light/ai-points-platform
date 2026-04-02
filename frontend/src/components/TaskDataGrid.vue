@@ -28,6 +28,7 @@ const emit = defineEmits<{
   'update:task': [task: Task];
   'create:task': [task: Task];
   'select:task': [task: Task];
+  'submit:task': [task: Task];
 }>();
 
 const tableRef = ref<VxeTableInstance<Task>>();

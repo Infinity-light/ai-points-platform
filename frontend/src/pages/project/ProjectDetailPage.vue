@@ -154,8 +154,7 @@ async function selectTask(task: Task) {
   }
 }
 
-function openSubmitModal(task: Task, event: Event) {
-  event.stopPropagation();
+function openSubmitModal(task: Task) {
   selectedTask.value = task;
   showSubmitModal.value = true;
 }
@@ -453,6 +452,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
               @select:task="selectTask"
               @update:task="onTaskUpdated"
               @create:task="onTaskCreated"
+              @submit:task="openSubmitModal"
             />
           </div>
 

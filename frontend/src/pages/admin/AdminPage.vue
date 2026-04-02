@@ -61,6 +61,12 @@ const allTabs: TabDef[] = [
     component: defineAsyncComponent(() => import('./tabs/BulletinSettingsTab.vue')),
   },
   {
+    key: 'ai-config',
+    label: 'AI 配置',
+    permission: { resource: 'config', action: 'update' },
+    component: defineAsyncComponent(() => import('./tabs/AiConfigTab.vue')),
+  },
+  {
     key: 'audit-log',
     label: '审计日志',
     permission: { resource: 'audit', action: 'read' },

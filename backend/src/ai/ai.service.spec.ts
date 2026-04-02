@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiService, ReviewInput } from './ai.service';
 import { ConfigService } from '@nestjs/config';
+import { AiProviderService } from '../ai-config/ai-provider.service';
 
 const mockCreate = jest.fn().mockResolvedValue({
   content: [{ type: 'text', text: '{"research":4,"planning":3,"execution":5}' }],
@@ -30,6 +31,13 @@ describe('AiService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue('test-value'),
+          },
+        },
+        {
+          provide: AiProviderService,
+          useValue: {
+            list: jest.fn().mockResolvedValue([]),
+            getActiveKey: jest.fn().mockResolvedValue(null),
           },
         },
       ],

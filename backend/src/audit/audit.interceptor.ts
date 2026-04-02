@@ -11,7 +11,7 @@ import { JwtPayload } from '../auth/strategies/jwt.strategy';
 interface RequestWithUser {
   method: string;
   url: string;
-  user?: JwtPayload & { name?: string };
+  user?: JwtPayload & { name?: string; authSource?: string };
   headers: Record<string, string | string[] | undefined>;
   tenantId?: string;
   ip?: string;
@@ -77,6 +77,7 @@ export class AuditInterceptor implements NestInterceptor {
     const resource = extractResourceFromUrl(request.url);
     const action = mapMethodToAction(method, request.url);
     const ipAddress = extractIpAddress(request);
+    const source = user.authSource ?? 'jwt';
 
     return next.handle().pipe(
       tap({
@@ -94,6 +95,7 @@ export class AuditInterceptor implements NestInterceptor {
                   ? (responseBody as Record<string, unknown>)
                   : undefined,
               ipAddress,
+              source,
             })
             .catch(() => {
               // 审计日志写入失败不影响主流程
@@ -108,6 +110,7 @@ export class AuditInterceptor implements NestInterceptor {
               action: `${action}_failed`,
               resource,
               ipAddress,
+              source,
             })
             .catch(() => {
               // 审计日志写入失败不影响主流程

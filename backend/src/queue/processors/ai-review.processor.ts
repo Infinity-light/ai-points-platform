@@ -39,7 +39,7 @@ export class AiReviewProcessor {
         taskDescription,
         submissionContent,
         submissionType,
-      });
+      }, tenantId);
 
       await this.taskService.updateAiScores(taskId, tenantId, scores);
       this.logger.log(`AI review complete for task ${taskId}: avg=${scores.average}`);
