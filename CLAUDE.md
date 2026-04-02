@@ -49,6 +49,7 @@ ai-points-platform/
 │   │   ├── meeting/         # 实时评审会议（Socket.IO + 投票 + 结算触发）
 │   │   ├── auction/         # 通用竞拍引擎（Bull 延迟任务 + 事件驱动）
 │   │   ├── bulletin/        # 公示区（工分排行/账目/决策/审计，支持公开模式）
+│   │   ├── ai-config/       # AI 配置中心（LLM 源 Key 轮询池 + Open API Key 管理）
 │   │   ├── upload/          # 文件上传
 │   │   └── webhook/         # Git Webhook 接收
 │   ├── Dockerfile           # 多阶段构建，China mirrors，bcrypt 原生编译
@@ -98,14 +99,14 @@ tier >= maxSteps 时清零
 - 全部失败：抛出异常，任务重新入队
 - Prompt 不传提交人姓名以去主观化
 
-**评审会议（v2）**：AI 评分后进入 `PENDING_REVIEW` 状态，由项目负责人开启实时评审会议（Socket.IO），团队逐条审核：
-- 认可 AI 评分 = 投出 AI 原始总分
-- 不认可 = 投出自定义总分（无上限，支持 Bonus）
-- 最终分数 = 所有参会者投分的中位数
+**评审会议（v3）**：AI 评分后进入 `PENDING_REVIEW` 状态，由项目负责人开启实时评审会议（Socket.IO），团队逐条审核：
+- 每个参会者直接投一个工分数（正整数，无上限），代表"我认为这个任务值 X 工分"
+- AI 三维评分作为参考信息展示，不参与计算
+- 最终工分 = 所有参会者投分的中位数
 - 多人任务：按百分比分配（不要求合计 100%）
 - 会议结束自动触发结算
 
-**结算积分公式**：`finalPoints = max(1, round(estimatedPoints × finalScore/15))`，finalScore 来自评审会议中位数。
+**结算积分公式**：`finalPoints = 评审会议投票中位数`（v3 简化，不再有 estimatedPoints 乘法公式）。任务创建时无需填写预估工分。
 
 ### 动态角色权限（RBAC）
 
@@ -123,6 +124,39 @@ tier >= maxSteps 时清零
 - Bull 延迟任务自动开奖
 - EventEmitter 事件驱动结果回写（如自动分配任务给赢家）
 - 单人任务第二人认领时自动触发竞拍
+
+### AI 配置中心
+
+统一管理出站（调用外部 LLM）和入站（平台 Open API）的 Key 配置。
+
+**出站配置（LLM Key 轮询池）**：
+- `ai_providers` 表：LLM 服务源（name, type, baseUrl），支持 anthropic/openai/azure_openai/custom
+- `ai_provider_keys` 表：每个源下多个 API Key，自动轮询调度
+- Key 调用失败自动 cooldown 5 分钟，切下一个
+- 无 DB 配置时 fallback 到环境变量 `LLM_API_KEY`
+
+**入站配置（Open API）**：
+- `open_api_keys` 表：平台 Open API Key（SHA-256 hash 存储，原文仅创建时返回一次）
+- Key 绑定到创建者用户，继承其角色权限
+- 管理后台「AI 配置」Tab 统一管理
+
+### Open API 鉴权（CompositeAuthGuard）
+
+全局 APP_GUARD 注册 `CompositeAuthGuard`，实现 JWT OR API Key 双鉴权：
+- 优先尝试 JWT（人类用户登录）
+- JWT 失败时尝试 `X-API-Key` header（外部工具调用）
+- 任一成功即通过，全失败返回 401
+- `@Public()` 装饰器标记免鉴权路由（登录、注册、webhook 等）
+- 审计日志 `source` 字段区分 `'web'`（JWT）和 `'open_api'`（API Key）
+
+### 多维任务表格
+
+项目详情页任务 Tab 使用 VxeTable v4 多维表格替代旧列表视图：
+- 固定列：标题、状态、负责人、优先级、标签、截止日期、AI 评分、最终工分、创建时间
+- 行内编辑：点击单元格直接编辑（标题/优先级/标签/截止日期），blur 或 Enter 保存
+- 自定义列：项目负责人可添加自定义列（文本/数字/日期/单选/多选），定义存 `project.metadata.customFields`，值存 `task.metadata[key]`
+- 底部新建行：输入标题 Enter 创建任务
+- VxeTable 暗色主题通过 CSS 变量覆盖适配
 
 ### CI/CD — server-build 策略
 
@@ -153,6 +187,9 @@ tier >= maxSteps 时清零
 - 登录：`POST /auth/login`，需要 `tenantSlug`、`email`、`password`，返回 JWT access + refresh token
 - 刷新：`POST /auth/refresh`（需 refresh token）
 - JWT access token 有效期 15m，refresh token 7d
+- 注册创建组织（`POST /auth/register-org`）时自动分配 super_admin 角色
+- 前端 axios 拦截器 401 时自动用 refresh token 续期（7 天内免登录）
+- `/auth/` 路径的请求不触发 401 重定向（登录失败能看到真实错误信息）
 
 ### points 模块
 
@@ -182,7 +219,16 @@ tier >= maxSteps 时清零
 ### audit 模块
 
 - 全局 `AuditInterceptor` 拦截所有写操作（POST/PATCH/DELETE），异步记录到 `audit_logs` 表
+- `source` 字段区分操作来源：`'web'`（JWT 登录）或 `'open_api'`（API Key 调用）
 - 查询：`GET /audit/logs`（分页+筛选）、`GET /audit/logs/:resource/:resourceId`（单资源历史）
+
+### ai-config 模块
+
+- **AI 服务源**：`GET/POST/PATCH/DELETE /ai-config/providers`，`GET/POST/DELETE /ai-config/providers/:id/keys`
+- **Open API Key**：`GET/POST/DELETE /ai-config/open-api-keys`
+- 所有接口需 `config:manage` 权限
+- `AiProviderService`：轮询调度 `getActiveKey(tenantId)`，失败 cooldown
+- `OpenApiKeyService`：SHA-256 hash 存储，`validateKey(rawKey)` 遍历匹配
 
 ### meeting 模块
 
