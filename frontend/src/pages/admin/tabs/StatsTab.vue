@@ -100,8 +100,8 @@ onMounted(() => {
           <p class="text-3xl font-mono font-bold text-foreground mt-1">{{ tenantStats.totalPointsAwarded }}</p>
         </div>
         <div class="glass-card p-5">
-          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">有效邀请码</p>
-          <p class="text-3xl font-mono font-bold text-foreground mt-1">{{ tenantStats.activeInviteCodes }}</p>
+          <p class="text-sm font-medium text-muted-foreground uppercase tracking-wider">活跃项目数</p>
+          <p class="text-3xl font-mono font-bold text-foreground mt-1">—</p>
         </div>
       </div>
 
