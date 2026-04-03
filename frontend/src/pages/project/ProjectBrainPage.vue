@@ -2,21 +2,28 @@
 import { ref, onMounted, nextTick, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/lib/axios';
-import { Send, Loader2, Brain } from 'lucide-vue-next';
+import { brainApi } from '@/services/brain';
+import { Send, Loader2, Brain, Trash2 } from 'lucide-vue-next';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
+import ToolCallCard from '@/components/ToolCallCard.vue';
 
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
+
+interface ToolCallInfo {
+  toolUseId: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  result?: unknown;
+  status: 'pending' | 'done' | 'error';
+  error?: string;
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   isStreaming?: boolean;
-}
-
-interface TaskSuggestion {
-  title: string;
-  description: string;
-  estimatedPoints: number;
+  toolCalls?: ToolCallInfo[];
 }
 
 const messages = ref<Message[]>([]);
@@ -24,20 +31,19 @@ const inputText = ref('');
 const isStreaming = ref(false);
 const conversationId = ref<string | null>(null);
 const messagesContainer = ref<HTMLElement | null>(null);
-const pendingTasks = ref<TaskSuggestion[]>([]);
-const showTaskConfirm = ref(false);
-const isConfirmingTasks = ref(false);
 
 onMounted(async () => {
-  // load existing conversation if any
   try {
-    const res = await api.get(`/brain/projects/${projectId.value}/conversation`);
-    if (res.data) {
-      conversationId.value = res.data.id;
-      messages.value = res.data.messages || [];
+    const conv = await brainApi.getConversation(projectId.value);
+    if (conv) {
+      conversationId.value = conv.id;
+      messages.value = (conv.messages || []).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
     }
   } catch {
-    // no conversation yet, start fresh
+    // no conversation yet
   }
   scrollToBottom();
 });
@@ -49,6 +55,16 @@ async function scrollToBottom() {
   }
 }
 
+async function clearConversation() {
+  try {
+    await brainApi.clearConversation(projectId.value);
+    messages.value = [];
+    conversationId.value = null;
+  } catch {
+    // ignore
+  }
+}
+
 async function sendMessage() {
   const text = inputText.value.trim();
   if (!text || isStreaming.value) return;
@@ -56,7 +72,12 @@ async function sendMessage() {
   inputText.value = '';
   messages.value.push({ role: 'user', content: text });
 
-  const assistantMsg: Message = { role: 'assistant', content: '', isStreaming: true };
+  const assistantMsg: Message = {
+    role: 'assistant',
+    content: '',
+    isStreaming: true,
+    toolCalls: [],
+  };
   messages.value.push(assistantMsg);
 
   isStreaming.value = true;
@@ -64,7 +85,6 @@ async function sendMessage() {
 
   try {
     const token = localStorage.getItem('access_token');
-    // api.defaults.baseURL is '/api' (relative), resolve against current origin
     const baseURL = api.defaults.baseURL?.startsWith('http')
       ? api.defaults.baseURL
       : `${window.location.origin}${api.defaults.baseURL ?? ''}`;
@@ -108,12 +128,28 @@ async function sendMessage() {
 
         try {
           const event = JSON.parse(jsonStr);
+
           if (event.type === 'delta') {
             assistantMsg.content += event.content;
             scrollToBottom();
-          } else if (event.type === 'task_suggestion' && event.tasks?.length) {
-            pendingTasks.value = event.tasks;
-            showTaskConfirm.value = true;
+          } else if (event.type === 'tool_call_start') {
+            assistantMsg.toolCalls!.push({
+              toolUseId: event.toolUseId,
+              toolName: event.toolName,
+              input: event.input ?? {},
+              status: 'pending',
+            });
+            scrollToBottom();
+          } else if (event.type === 'tool_call_result') {
+            const tc = assistantMsg.toolCalls!.find(
+              (t) => t.toolUseId === event.toolUseId,
+            );
+            if (tc) {
+              tc.result = event.result;
+              tc.status = event.status ?? 'done';
+              tc.error = event.error;
+            }
+            scrollToBottom();
           } else if (event.type === 'conversation_id') {
             conversationId.value = event.conversationId;
           } else if (event.type === 'done') {
@@ -121,7 +157,7 @@ async function sendMessage() {
             break;
           }
         } catch {
-          // ignore parse errors for individual SSE events
+          // ignore parse errors
         }
       }
     }
@@ -131,26 +167,6 @@ async function sendMessage() {
     assistantMsg.isStreaming = false;
     isStreaming.value = false;
     scrollToBottom();
-  }
-}
-
-async function confirmTasks() {
-  isConfirmingTasks.value = true;
-  try {
-    await api.post(`/brain/projects/${projectId.value}/confirm-tasks`, {
-      tasks: pendingTasks.value,
-      conversationId: conversationId.value,
-    });
-    showTaskConfirm.value = false;
-    messages.value.push({
-      role: 'assistant',
-      content: `已成功创建 ${pendingTasks.value.length} 个任务`,
-    });
-    pendingTasks.value = [];
-  } catch {
-    // handle error silently
-  } finally {
-    isConfirmingTasks.value = false;
   }
 }
 
@@ -170,10 +186,18 @@ function handleKeydown(e: KeyboardEvent) {
         <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
           <Brain class="w-4 h-4 text-primary" />
         </div>
-        <div>
+        <div class="flex-1">
           <h2 class="text-lg font-heading font-semibold text-foreground">项目智脑</h2>
-          <p class="text-sm text-muted-foreground">你的 AI 项目管理助手，可以读取任务表、分析进度、生成新任务</p>
+          <p class="text-sm text-muted-foreground">AI 助手，可以查询任务、工分、成员，创建任务，触发结算等</p>
         </div>
+        <button
+          v-if="messages.length > 0"
+          @click="clearConversation"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+          清空对话
+        </button>
       </div>
     </div>
 
@@ -182,15 +206,15 @@ function handleKeydown(e: KeyboardEvent) {
       <!-- Welcome message if empty -->
       <div v-if="messages.length === 0" class="text-center py-12">
         <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span class="text-3xl">&#129504;</span>
+          <Brain class="w-8 h-8 text-primary" />
         </div>
         <h3 class="text-lg font-heading font-medium text-foreground mb-2">项目智脑已就绪</h3>
         <p class="text-muted-foreground text-sm max-w-sm mx-auto">
-          你可以问我关于项目进度、任务分配、工分分析的问题，或者让我帮你生成新的任务。
+          智脑可以查询和操作项目数据。试试问我一些问题吧。
         </p>
         <div class="mt-6 flex flex-wrap gap-2 justify-center">
           <button
-            v-for="prompt in ['分析当前项目进度', '有哪些任务没人认领？', '帮我生成三个新任务', '本周工分分布如何？']"
+            v-for="prompt in ['列出所有任务', '工分排行榜', '帮我创建一个新任务', '分析项目进度']"
             :key="prompt"
             @click="inputText = prompt"
             class="px-3 py-1.5 glass-card text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors duration-200 cursor-pointer"
@@ -225,66 +249,40 @@ function handleKeydown(e: KeyboardEvent) {
         <!-- Bubble -->
         <div
           :class="[
-            'max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
+            'max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
             msg.role === 'user'
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : 'glass-card text-foreground rounded-tl-sm',
           ]"
         >
-          <span class="whitespace-pre-wrap">{{ msg.content }}</span>
-          <span
-            v-if="msg.isStreaming"
-            class="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 animate-pulse align-text-bottom"
-          ></span>
-        </div>
-      </div>
-    </div>
+          <!-- User messages: plain text -->
+          <span v-if="msg.role === 'user'" class="whitespace-pre-wrap">{{ msg.content }}</span>
 
-    <!-- Task suggestion confirmation panel -->
-    <div
-      v-if="showTaskConfirm"
-      class="mx-6 mb-4 glass-card p-4"
-    >
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-heading font-semibold text-foreground">智脑建议创建以下任务</h3>
-        <button @click="showTaskConfirm = false" class="text-muted-foreground hover:text-foreground text-lg leading-none cursor-pointer transition-colors duration-200">
-          &times;
-        </button>
-      </div>
-      <div class="space-y-2 mb-4">
-        <div
-          v-for="(task, idx) in pendingTasks"
-          :key="idx"
-          class="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg"
-        >
-          <span
-            class="flex-shrink-0 w-5 h-5 bg-primary/10 text-primary rounded-full text-xs flex items-center justify-center font-mono font-bold mt-0.5"
-          >
-            {{ idx + 1 }}
-          </span>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-foreground">{{ task.title }}</p>
-            <p class="text-xs text-muted-foreground mt-0.5">{{ task.description }}</p>
-          </div>
-          <span class="flex-shrink-0 text-xs font-mono text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
-            {{ task.estimatedPoints }} 分
-          </span>
+          <!-- Assistant messages: Markdown + tool cards -->
+          <template v-else>
+            <MarkdownRenderer v-if="msg.content" :content="msg.content" />
+            <span
+              v-if="msg.isStreaming && !msg.content && (!msg.toolCalls || msg.toolCalls.length === 0)"
+              class="inline-block w-1.5 h-4 bg-primary/60 animate-pulse"
+            ></span>
+            <span
+              v-if="msg.isStreaming && msg.content"
+              class="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 animate-pulse align-text-bottom"
+            ></span>
+
+            <!-- Tool call cards -->
+            <ToolCallCard
+              v-for="tc in msg.toolCalls"
+              :key="tc.toolUseId"
+              :tool-name="tc.toolName"
+              :tool-use-id="tc.toolUseId"
+              :input="tc.input"
+              :result="tc.result"
+              :status="tc.status"
+              :error="tc.error"
+            />
+          </template>
         </div>
-      </div>
-      <div class="flex gap-2">
-        <button
-          @click="confirmTasks"
-          :disabled="isConfirmingTasks"
-          class="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium py-2 px-4 rounded-lg transition-colors duration-200 cursor-pointer"
-        >
-          {{ isConfirmingTasks ? '创建中...' : '确认创建任务' }}
-        </button>
-        <button
-          @click="showTaskConfirm = false"
-          class="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-white/5 hover:text-foreground transition-colors duration-200 cursor-pointer"
-        >
-          忽略
-        </button>
       </div>
     </div>
 
@@ -309,7 +307,7 @@ function handleKeydown(e: KeyboardEvent) {
           <Loader2 v-else class="w-5 h-5 animate-spin" />
         </button>
       </div>
-      <p class="text-xs text-muted-foreground mt-2">智脑可以访问项目任务表，帮你分析和管理任务</p>
+      <p class="text-xs text-muted-foreground mt-2">智脑会调用工具获取真实数据来回答你的问题</p>
     </div>
   </div>
 </template>

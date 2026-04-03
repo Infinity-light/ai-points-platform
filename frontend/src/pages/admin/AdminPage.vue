@@ -60,6 +60,12 @@ const allTabs: TabDef[] = [
     permission: { resource: 'audit', action: 'read' },
     component: defineAsyncComponent(() => import('./tabs/AuditLogTab.vue')),
   },
+  {
+    key: 'plugins',
+    label: '智脑插件',
+    permission: { resource: 'config', action: 'manage' },
+    component: defineAsyncComponent(() => import('./tabs/PluginConfigTab.vue')),
+  },
 ];
 
 const visibleTabs = computed(() => {

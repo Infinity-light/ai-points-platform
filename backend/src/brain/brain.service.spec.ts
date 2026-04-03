@@ -2,30 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BrainService } from './brain.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BrainConversation } from './entities/brain-conversation.entity';
-import { Submission } from '../submission/entities/submission.entity';
-import { TaskService } from '../task/task.service';
 import { ProjectService } from '../project/project.service';
-import { PointsService } from '../points/points.service';
-import { SkillService } from '../skill/skill.service';
 import { ConfigService } from '@nestjs/config';
-
-const mockCreate = jest.fn().mockResolvedValue({
-  content: [{ type: 'text', text: '[{"title":"测试任务","description":"描述","estimatedPoints":10}]' }],
-});
-
-const mockStream = jest.fn().mockReturnValue({
-  [Symbol.asyncIterator]: async function* () {
-    yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hello' } };
-    yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ' World' } };
-  },
-});
+import { AiProviderService } from '../ai-config/ai-provider.service';
+import { PluginRegistry } from './plugin-registry.service';
 
 // Mock Anthropic — must include __esModule: true for ts-jest CJS interop
 jest.mock('@anthropic-ai/sdk', () => {
   const MockAnthropic = jest.fn().mockImplementation(() => ({
     messages: {
-      create: mockCreate,
-      stream: mockStream,
+      stream: jest.fn().mockReturnValue({
+        finalMessage: jest.fn().mockResolvedValue({
+          content: [{ type: 'text', text: 'Hello World' }],
+          stop_reason: 'end_turn',
+        }),
+      }),
     },
   }));
   return { __esModule: true, default: MockAnthropic };
@@ -48,8 +39,8 @@ const mockProject = {
 describe('BrainService', () => {
   let service: BrainService;
   let convRepo: { findOne: jest.Mock; create: jest.Mock; save: jest.Mock };
-  let taskService: { findAll: jest.Mock; create: jest.Mock; findOne: jest.Mock };
   let projectService: { findOne: jest.Mock };
+  let pluginRegistry: { getEnabledTools: jest.Mock; executeTool: jest.Mock };
 
   beforeEach(async () => {
     convRepo = {
@@ -58,25 +49,22 @@ describe('BrainService', () => {
       save: jest.fn().mockImplementation((c) => Promise.resolve(c)),
     };
 
-    taskService = {
-      findAll: jest.fn().mockResolvedValue([]),
-      create: jest.fn().mockResolvedValue({ id: 'task-uuid', title: 'New Task' }),
-      findOne: jest.fn(),
-    };
-
     projectService = {
       findOne: jest.fn().mockResolvedValue(mockProject),
+    };
+
+    pluginRegistry = {
+      getEnabledTools: jest.fn().mockResolvedValue([]),
+      executeTool: jest.fn().mockResolvedValue({ id: 'task-uuid', title: 'New Task' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BrainService,
         { provide: getRepositoryToken(BrainConversation), useValue: convRepo },
-        { provide: getRepositoryToken(Submission), useValue: { find: jest.fn().mockResolvedValue([]) } },
-        { provide: TaskService, useValue: taskService },
         { provide: ProjectService, useValue: projectService },
-        { provide: PointsService, useValue: { getProjectPointsTable: jest.fn().mockResolvedValue({ members: [] }) } },
-        { provide: SkillService, useValue: { findForProject: jest.fn().mockResolvedValue([]) } },
+        { provide: AiProviderService, useValue: { list: jest.fn().mockResolvedValue([]) } },
+        { provide: PluginRegistry, useValue: pluginRegistry },
         {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('test-value') },
@@ -103,23 +91,14 @@ describe('BrainService', () => {
     });
   });
 
-  describe('suggestTasks', () => {
-    it('应该返回 AI 建议的任务列表', async () => {
-      const result = await service.suggestTasks('tenant-uuid', 'proj-uuid', 'user-uuid', '给我推荐一些任务');
-      expect(result).toHaveLength(1);
-      expect(result[0].title).toBe('测试任务');
-      expect(result[0].estimatedPoints).toBe(10);
-    });
-  });
-
   describe('createTasksFromSuggestions', () => {
     it('应该批量创建任务', async () => {
       const count = await service.createTasksFromSuggestions(
         'tenant-uuid', 'proj-uuid', 'user-uuid',
-        [{ title: '任务1', description: '描述', estimatedPoints: 5 }, { title: '任务2' }]
+        [{ title: '任务1', description: '描述' }, { title: '任务2' }],
       );
       expect(count).toBe(2);
-      expect(taskService.create).toHaveBeenCalledTimes(2);
+      expect(pluginRegistry.executeTool).toHaveBeenCalledTimes(2);
     });
   });
 

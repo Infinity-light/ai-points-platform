@@ -13,42 +13,53 @@ export interface BrainConversation {
   updatedAt: string;
 }
 
-export interface TaskSuggestion {
-  title: string;
-  description: string;
-  estimatedPoints: number;
-}
-
-export interface BrainChatResponse {
-  conversationId: string;
-  content: string;
-}
-
 export const brainApi = {
-  // Get or create conversation for project
   getConversation(projectId: string): Promise<BrainConversation | null> {
     return api.get(`/brain/projects/${projectId}/conversation`).then((r) => r.data).catch(() => null);
   },
 
-  // Parse task suggestions from content (if backend sends structured suggestions)
-  parseTaskSuggestions(content: string): TaskSuggestion[] {
-    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[1]);
-        if (Array.isArray(parsed)) return parsed;
-        if (parsed.tasks) return parsed.tasks;
-      } catch {
-        // ignore parse errors
-      }
-    }
-    return [];
+  clearConversation(projectId: string): Promise<void> {
+    return api.delete(`/brain/projects/${projectId}/conversation`).then(() => undefined);
+  },
+};
+
+// ── Plugin admin API ────────────────────────────────────────────
+
+export interface BrainPluginTool {
+  name: string;
+  description: string;
+  requiredPermission?: { resource: string; action: string };
+}
+
+export interface BrainPluginInfo {
+  id: string;
+  name: string;
+  type: string;
+  toolCount: number;
+  tools: BrainPluginTool[];
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
+
+export const brainPluginApi = {
+  list(): Promise<BrainPluginInfo[]> {
+    return api.get('/brain/plugins').then((r) => r.data);
   },
 
-  // Confirm and create task suggestions
-  confirmTaskSuggestions(projectId: string, tasks: TaskSuggestion[], conversationId: string): Promise<void> {
+  update(
+    pluginId: string,
+    body: { enabled?: boolean; config?: Record<string, unknown> },
+  ): Promise<void> {
+    return api.patch(`/brain/plugins/${encodeURIComponent(pluginId)}`, body).then(() => undefined);
+  },
+
+  testTool(
+    pluginId: string,
+    toolName: string,
+    input?: Record<string, unknown>,
+  ): Promise<{ success: boolean; result?: unknown; error?: string }> {
     return api
-      .post(`/brain/projects/${projectId}/confirm-tasks`, { tasks, conversationId })
-      .then(() => undefined);
+      .post(`/brain/plugins/${encodeURIComponent(pluginId)}/test`, { toolName, input })
+      .then((r) => r.data);
   },
 };

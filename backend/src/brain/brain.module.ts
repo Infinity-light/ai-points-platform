@@ -2,23 +2,27 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BrainService } from './brain.service';
 import { BrainController } from './brain.controller';
+import { McpController } from './mcp.controller';
+import { PluginAdminController } from './plugin-admin.controller';
 import { BrainConversation } from './entities/brain-conversation.entity';
-import { TaskModule } from '../task/task.module';
+import { BrainPluginConfig } from './entities/brain-plugin-config.entity';
 import { ProjectModule } from '../project/project.module';
-import { PointsModule } from '../points/points.module';
-import { SkillModule } from '../skill/skill.module';
-import { Submission } from '../submission/entities/submission.entity';
+import { AiConfigModule } from '../ai-config/ai-config.module';
+import { RbacModule } from '../rbac/rbac.module';
+import { BuiltinPluginsModule } from './plugins/builtin/builtin-plugins.module';
+import { PluginRegistry } from './plugin-registry.service';
+import { LarkCliPlugin } from './plugins/lark-cli/lark-cli.plugin';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BrainConversation, Submission]),
-    TaskModule,
+    TypeOrmModule.forFeature([BrainConversation, BrainPluginConfig]),
     ProjectModule,
-    PointsModule,
-    SkillModule,
+    AiConfigModule,
+    RbacModule,
+    BuiltinPluginsModule,
   ],
-  controllers: [BrainController],
-  providers: [BrainService],
-  exports: [BrainService],
+  controllers: [BrainController, McpController, PluginAdminController],
+  providers: [BrainService, PluginRegistry, LarkCliPlugin],
+  exports: [BrainService, PluginRegistry],
 })
 export class BrainModule {}

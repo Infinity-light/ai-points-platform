@@ -5,7 +5,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   Request,
   Res,
 } from '@nestjs/common';
@@ -22,7 +21,7 @@ class ChatDto {
 
 class CreateFromSuggestionsDto {
   @IsArray()
-  tasks!: Array<{ title: string; description?: string; estimatedPoints?: number }>;
+  tasks!: Array<{ title: string; description?: string }>;
 }
 
 interface RequestWithUser extends Request {
@@ -61,20 +60,6 @@ export class BrainController {
       req.user.sub,
       dto.message,
       res,
-    );
-  }
-
-  @Post('projects/:projectId/suggest-tasks')
-  suggestTasks(
-    @Param('projectId') projectId: string,
-    @Body() dto: ChatDto,
-    @Request() req: RequestWithUser,
-  ) {
-    return this.brainService.suggestTasks(
-      req.user.tenantId,
-      projectId,
-      req.user.sub,
-      dto.message,
     );
   }
 
