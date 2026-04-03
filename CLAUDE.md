@@ -39,7 +39,7 @@ ai-points-platform/
 │   │   ├── vote/            # 投票会话、加权投票计算
 │   │   ├── points/          # 工分记录、退火计算、/points/my-summary API
 │   │   ├── settlement/      # 结算触发、退火重算、分红事件
-│   │   ├── brain/           # 智脑对话、SSE 流式输出
+│   │   ├── brain/           # 智脑 Agentic Loop + Plugin 体系 + MCP Server
 │   │   ├── notification/    # 站内通知
 │   │   ├── admin/           # 统一管理后台 API（含用户管理、租户设置）
 │   │   ├── super-admin/     # 超管 API（租户、全局配置）
@@ -256,10 +256,52 @@ tier >= maxSteps 时清零
 - `monthlyPoints`：当月新增原始工分
 - 实现注入 `ProjectRepository`，按 projectId 批量拉取配置后逐条计算
 
-### brain 模块
+### brain 模块（Agentic Plugin 体系）
 
-- SSE 流式输出端点，LLM 对话历史持久化
-- 支持文档检索、任务表操作
+**架构**：BrainTool/BrainPlugin 接口 + PluginRegistry + while(true) Agentic Loop
+
+**Plugin 体系**：
+- `BrainPlugin` 接口：统一的工具注册/调用协议，支持 `builtin`/`mcp`/`cli`/`custom` 四种类型
+- `PluginRegistry`：中央注册表，`getEnabledTools()` 按租户配置 + RBAC 过滤工具
+- `BrainPluginConfig` 实体：租户级插件启用/禁用配置（`brain_plugin_configs` 表）
+- 内置插件无配置行时默认启用（零配置可用）
+
+**6 个内置插件（14 个工具）**：
+
+| Plugin ID | 工具数 | 说明 |
+|-----------|--------|------|
+| `builtin:tasks` | 5 | task_list/get/create/update/transition |
+| `builtin:points` | 2 | points_table/my_summary |
+| `builtin:members` | 1 | members_list |
+| `builtin:submissions` | 1 | submission_list_by_task |
+| `builtin:settlement` | 2 | settlement_list/trigger（trigger 需确认） |
+| `builtin:auction` | 3 | auction_list/get/place_bid |
+
+**Agentic Loop**（`BrainService.streamChat`）：
+- while(true) 循环：调用 Anthropic API → 处理 text/tool_use → 执行工具 → 追加结果 → 继续
+- Anthropic 客户端通过 `AiProviderService` 解析租户 Key，fallback 环境变量
+- System prompt 精简为 XML（角色+项目基本信息+日期），真实数据由工具提供
+- SSE 事件：`delta`/`tool_call_start`/`tool_call_result`/`done`/`error`
+- 对话持久化：ChatMessage 新增 `toolCalls?: ToolCallRecord[]`（向后兼容）
+
+**MCP Server**（`/mcp` 端点）：
+- `@modelcontextprotocol/sdk` SSE 传输，X-API-Key 鉴权（OpenApiKeyService）
+- 将平台工具以 MCP 协议暴露给外部 AI 工具
+- 运行时条件加载：Node 20 CJS 不支持 SDK 子路径导出时优雅降级（返回 501）
+
+**lark-cli Plugin**（`cli:lark`）：
+- 5 个工具：lark_bitable_query/create、lark_send_message、lark_create_task、lark_search_contact
+- 通过 `child_process.execFile('lark-cli', ...)` 执行，需服务器安装 lark-cli
+- 条件注册：仅在 `brain_plugin_configs` 中显式启用时加载
+
+**管理后台**：
+- `PluginAdminController`（`/brain/plugins`）：列出/启用/禁用/测试插件，需 `config:manage` 权限
+- 前端 `PluginConfigTab.vue`：注册在管理后台「智脑插件」Tab
+
+**前端**：
+- `MarkdownRenderer.vue`：markdown-it 渲染 + 暗色 prose 样式
+- `ToolCallCard.vue`：折叠卡片（工具名 + 状态徽标 + 可展开输入/输出 JSON）
+- `ProjectBrainPage.vue`：Markdown 渲染 + 工具卡片 + 清空对话按钮
 
 ### super-admin 模块
 
