@@ -8,18 +8,22 @@ import {
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import type { Request, Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { OpenApiKeyService } from '../ai-config/open-api-key.service';
 import { PluginRegistry } from './plugin-registry.service';
 
+// Dynamic require for MCP SDK sub-path modules (avoids TS module resolution issues with .js exports)
+/* eslint-disable @typescript-eslint/no-require-imports */
+const McpServerModule = require('@modelcontextprotocol/sdk/server/mcp.js');
+const SseModule = require('@modelcontextprotocol/sdk/server/sse.js');
+/* eslint-enable @typescript-eslint/no-require-imports */
+
 @Controller('mcp')
 @Public()
 export class McpController implements OnModuleInit {
   private readonly logger = new Logger(McpController.name);
-  private readonly transports = new Map<string, SSEServerTransport>();
+  private readonly transports = new Map<string, any>();
 
   constructor(
     private readonly openApiKeyService: OpenApiKeyService,
@@ -46,11 +50,11 @@ export class McpController implements OnModuleInit {
       return;
     }
 
-    const transport = new SSEServerTransport('/mcp', res);
+    const transport = new SseModule.SSEServerTransport('/mcp', res);
     this.transports.set(transport.sessionId, transport);
 
     // Create a per-session MCP server
-    const server = new McpServer({
+    const server = new McpServerModule.McpServer({
       name: 'ai-points-platform',
       version: '1.0.0',
     });
@@ -67,9 +71,9 @@ export class McpController implements OnModuleInit {
         tool.name,
         tool.description,
         tool.inputSchema.properties,
-        async (params) => {
+        async (params: Record<string, unknown>) => {
           try {
-            const result = await tool.call(params as Record<string, unknown>, {
+            const result = await tool.call(params, {
               tenantId: auth.tenantId,
               projectId: projectId ?? '',
               userId: auth.userId,
