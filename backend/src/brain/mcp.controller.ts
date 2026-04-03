@@ -13,10 +13,16 @@ import { Public } from '../auth/decorators/public.decorator';
 import { OpenApiKeyService } from '../ai-config/open-api-key.service';
 import { PluginRegistry } from './plugin-registry.service';
 
-// Dynamic require for MCP SDK sub-path modules (avoids TS module resolution issues with .js exports)
+// Resolve MCP SDK sub-path modules via direct dist path (Node 20 CJS can't resolve wildcard exports)
 /* eslint-disable @typescript-eslint/no-require-imports */
-const McpServerModule = require('@modelcontextprotocol/sdk/server/mcp.js');
-const SseModule = require('@modelcontextprotocol/sdk/server/sse.js');
+let McpServerClass: any = null;
+let SSEServerTransportClass: any = null;
+try {
+  McpServerClass = require('@modelcontextprotocol/sdk/dist/cjs/server/mcp.js').McpServer;
+  SSEServerTransportClass = require('@modelcontextprotocol/sdk/dist/cjs/server/sse.js').SSEServerTransport;
+} catch {
+  // MCP SDK not available — controller will return 501
+}
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 @Controller('mcp')
@@ -24,6 +30,7 @@ const SseModule = require('@modelcontextprotocol/sdk/server/sse.js');
 export class McpController implements OnModuleInit {
   private readonly logger = new Logger(McpController.name);
   private readonly transports = new Map<string, any>();
+  private mcpAvailable = false;
 
   constructor(
     private readonly openApiKeyService: OpenApiKeyService,
@@ -31,7 +38,12 @@ export class McpController implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    this.logger.log('MCP endpoint initialized at /mcp');
+    this.mcpAvailable = !!(McpServerClass && SSEServerTransportClass);
+    if (this.mcpAvailable) {
+      this.logger.log('MCP endpoint initialized at /mcp');
+    } else {
+      this.logger.warn('MCP SDK not available — /mcp endpoint disabled');
+    }
   }
 
   /**
@@ -43,6 +55,11 @@ export class McpController implements OnModuleInit {
     @Res() res: Response,
     @Query('projectId') projectId?: string,
   ): Promise<void> {
+    if (!this.mcpAvailable) {
+      res.status(501).json({ error: 'MCP endpoint not available' });
+      return;
+    }
+
     // Authenticate via X-API-Key
     const auth = await this.authenticate(req);
     if (!auth) {
@@ -50,11 +67,11 @@ export class McpController implements OnModuleInit {
       return;
     }
 
-    const transport = new SseModule.SSEServerTransport('/mcp', res);
+    const transport = new SSEServerTransportClass('/mcp', res);
     this.transports.set(transport.sessionId, transport);
 
     // Create a per-session MCP server
-    const server = new McpServerModule.McpServer({
+    const server = new McpServerClass({
       name: 'ai-points-platform',
       version: '1.0.0',
     });
@@ -108,6 +125,11 @@ export class McpController implements OnModuleInit {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    if (!this.mcpAvailable) {
+      res.status(501).json({ error: 'MCP endpoint not available' });
+      return;
+    }
+
     const sessionId = req.query.sessionId as string;
     const transport = this.transports.get(sessionId);
 
