@@ -36,7 +36,7 @@ export const bitableApi = {
       .then((r) => r.data),
 
   getBinding: (projectId: string) =>
-    api.get<BitableBinding | null>(`/projects/${projectId}/bitable/binding`).then((r) => r.data),
+    api.get<{ binding: BitableBinding | null; embedUrl: string | null }>(`/projects/${projectId}/bitable/binding`).then((r) => r.data),
 
   createBinding: (
     projectId: string,
@@ -60,6 +60,7 @@ export const bitableApi = {
       .then((r) => r.data),
 };
 
-export function getFeishuTableUrl(binding: BitableBinding): string {
-  return `https://ecnjgebfaiuk.feishu.cn/base/${binding.appToken}?table=${binding.tableId}`;
+export function getFeishuTableUrl(binding: BitableBinding, embedUrl?: string | null): string {
+  if (embedUrl) return embedUrl;
+  return `https://feishu.cn/base/${binding.appToken}?table=${binding.tableId}`;
 }

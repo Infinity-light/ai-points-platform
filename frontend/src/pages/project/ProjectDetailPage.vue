@@ -114,7 +114,7 @@ async function load() {
       name: userMap.get(m.userId) ?? m.userId,
     }));
     customColumns.value = customFieldsRes.data;
-    bitableBinding.value = bindingData ?? null;
+    bitableBinding.value = bindingData?.binding ?? null;
   } catch {
     // ignore
   } finally {

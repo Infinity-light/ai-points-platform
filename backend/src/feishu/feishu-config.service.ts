@@ -59,14 +59,29 @@ export class FeishuConfigService {
 
   async testConnection(tenantId: string): Promise<{ success: boolean; tenantName?: string; message?: string }> {
     try {
-      const client = await this.feishuClientService.getClient(tenantId);
-      await client.auth.tenantAccessToken.internal({
-        data: {
-          app_id: '',
-          app_secret: '',
-        },
+      const config = await this.configRepo
+        .createQueryBuilder('c')
+        .addSelect('c.encryptedAppSecret')
+        .where('c.tenantId = :tenantId', { tenantId })
+        .getOne();
+
+      if (!config) {
+        return { success: false, message: '飞书配置未找到' };
+      }
+
+      const appSecret = this.feishuClientService.decryptSecret(config.encryptedAppSecret);
+
+      const res = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_id: config.appId, app_secret: appSecret }),
       });
-      // If we get here without throw, connection is working
+
+      const data = await res.json();
+      if (data.code !== 0 || !data.tenant_access_token) {
+        return { success: false, message: data.msg ?? `错误码: ${data.code}` };
+      }
+
       return { success: true, tenantName: 'Connected' };
     } catch (err) {
       return { success: false, message: String(err) };

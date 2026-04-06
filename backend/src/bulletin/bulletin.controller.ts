@@ -9,6 +9,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { BulletinService } from './bulletin.service';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 class PaginationQuery {
@@ -100,6 +101,7 @@ export class BulletinController {
 
 // ── Public routes (no JWT required) ──────────────────────────────────────────
 
+@Public()
 @Controller('public/:tenantSlug/bulletin')
 export class PublicBulletinController {
   constructor(private readonly bulletinService: BulletinService) {}

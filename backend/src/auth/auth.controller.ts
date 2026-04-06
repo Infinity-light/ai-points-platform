@@ -123,9 +123,9 @@ export class AuthController {
       const redirectUrl = `/auth/feishu/bindConfirm?token=${encodeURIComponent(result.linkToken)}&name=${encodeURIComponent(result.feishuName ?? '')}&email=${encodeURIComponent(result.matchedEmail ?? '')}`;
       res.redirect(redirectUrl);
     } else if (result.authResponse) {
-      // Redirect to dashboard with tokens
+      // Redirect to landing page that stores tokens in localStorage
       const { accessToken, refreshToken } = result.authResponse;
-      const redirectUrl = `/dashboard?accessToken=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`;
+      const redirectUrl = `/auth/feishu/landing?token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}`;
       res.redirect(redirectUrl);
     } else {
       res.redirect('/login?error=feishu_failed');

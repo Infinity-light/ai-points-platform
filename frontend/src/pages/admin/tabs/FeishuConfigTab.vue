@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   feishuConfigApi,
   type FeishuConfig,
@@ -13,7 +13,7 @@ import {
   Copy, Check, RefreshCw, Trash2, Plus,
   ExternalLink, ChevronRight, ChevronDown,
   Settings, Shield, Upload, Zap, Users, FolderSync,
-  AlertCircle, CheckCircle2, Loader2, Link,
+  AlertCircle, CheckCircle2,
 } from 'lucide-vue-next';
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -26,20 +26,11 @@ const TOTAL_STEPS = 6;
 
 // ─── Step 1: App creation / credentials ──────────────────────────────────────
 
-const inputMode = ref<'device' | 'manual'>('device');
 const formAppId = ref('');
 const formAppSecret = ref('');
 const formEnabled = ref(true);
 const configSaving = ref(false);
 const configError = ref('');
-
-// Device flow
-const deviceFlowAvailable = ref(true);
-const deviceFlowActive = ref(false);
-const deviceFlowUri = ref('');
-const deviceFlowCode = ref('');
-const deviceFlowPolling = ref(false);
-let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 // Test connection
 const testLoading = ref(false);
@@ -148,53 +139,6 @@ async function loadSyncLogs() {
 }
 
 // ─── Step 1 actions ──────────────────────────────────────────────────────────
-
-async function startDeviceFlow() {
-  deviceFlowActive.value = true;
-  try {
-    const res = await feishuConfigApi.beginDeviceFlow();
-    if (!res.available) {
-      deviceFlowAvailable.value = false;
-      inputMode.value = 'manual';
-      deviceFlowActive.value = false;
-      return;
-    }
-    deviceFlowUri.value = res.verificationUri ?? '';
-    deviceFlowCode.value = res.deviceCode ?? '';
-    deviceFlowPolling.value = true;
-
-    pollTimer = setInterval(async () => {
-      if (!deviceFlowCode.value) return;
-      try {
-        const poll = await feishuConfigApi.pollDeviceFlow(deviceFlowCode.value);
-        if (poll.status === 'completed' && poll.config) {
-          stopPolling();
-          config.value = poll.config;
-          formAppId.value = poll.config.appId;
-          formEnabled.value = poll.config.enabled;
-          deviceFlowActive.value = false;
-          wizardStep.value = 2;
-        } else if (poll.status === 'expired' || poll.status === 'error') {
-          stopPolling();
-          deviceFlowActive.value = false;
-          configError.value = poll.message ?? '授权超时，请重试';
-        }
-      } catch {
-        stopPolling();
-        deviceFlowActive.value = false;
-      }
-    }, 5000);
-  } catch {
-    deviceFlowAvailable.value = false;
-    inputMode.value = 'manual';
-    deviceFlowActive.value = false;
-  }
-}
-
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  deviceFlowPolling.value = false;
-}
 
 async function saveManualConfig() {
   if (!formAppId.value.trim()) { configError.value = '请填写 App ID'; return; }
@@ -360,8 +304,6 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => { stopPolling(); });
-
 // When entering steps that need data
 watch(wizardStep, (step) => {
   if (step === 5 && mappings.value.length === 0) void loadMappings();
@@ -407,68 +349,9 @@ watch(wizardStep, (step) => {
 
       <!-- ─── Step 1: Connect App ─── -->
       <div v-if="wizardStep === 1" class="glass-card p-6 space-y-4">
-        <h3 class="text-sm font-semibold text-foreground">步骤 1：创建或连接飞书应用</h3>
+        <h3 class="text-sm font-semibold text-foreground">步骤 1：连接飞书应用</h3>
 
-        <!-- Mode toggle -->
-        <div class="flex gap-2">
-          <button
-            class="px-3 py-1.5 text-xs rounded-lg transition-colors cursor-pointer"
-            :class="inputMode === 'device' ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'"
-            @click="inputMode = 'device'"
-          >
-            <Link class="w-3.5 h-3.5 inline mr-1" />一键创建应用
-          </button>
-          <button
-            class="px-3 py-1.5 text-xs rounded-lg transition-colors cursor-pointer"
-            :class="inputMode === 'manual' ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'"
-            @click="inputMode = 'manual'"
-          >
-            手动输入凭据
-          </button>
-        </div>
-
-        <!-- Device flow -->
-        <div v-if="inputMode === 'device'" class="space-y-3">
-          <p class="text-xs text-muted-foreground">点击下方按钮，在飞书中扫码或点击链接授权，应用将自动创建并回填凭据。</p>
-
-          <div v-if="!deviceFlowAvailable" class="text-xs text-yellow-400 flex items-center gap-1.5">
-            <AlertCircle class="w-3.5 h-3.5" />
-            一键创建暂时不可用，请使用手动输入
-          </div>
-
-          <div v-else-if="deviceFlowActive" class="bg-secondary/40 rounded-lg p-4 space-y-3">
-            <p class="text-sm text-foreground">请在浏览器中打开以下链接完成授权：</p>
-            <a
-              :href="deviceFlowUri"
-              target="_blank"
-              class="text-primary text-sm underline break-all flex items-center gap-1"
-            >
-              {{ deviceFlowUri }}
-              <ExternalLink class="w-3.5 h-3.5 shrink-0" />
-            </a>
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 class="w-3.5 h-3.5 animate-spin" />
-              等待授权确认...
-            </div>
-            <button
-              class="text-xs text-muted-foreground underline cursor-pointer"
-              @click="stopPolling(); deviceFlowActive = false"
-            >
-              取消
-            </button>
-          </div>
-
-          <button
-            v-else
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
-            @click="startDeviceFlow"
-          >
-            一键创建飞书应用
-          </button>
-        </div>
-
-        <!-- Manual input -->
-        <div v-if="inputMode === 'manual'" class="space-y-3">
+        <div class="space-y-3">
           <p class="text-xs text-muted-foreground">
             在
             <a href="https://open.feishu.cn/app" target="_blank" class="text-primary underline">飞书开放平台</a>

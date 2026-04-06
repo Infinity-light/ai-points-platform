@@ -72,22 +72,6 @@ export interface FeishuEnabledResponse {
   enabled: boolean;
 }
 
-// Device Flow types
-export interface DeviceFlowBeginResponse {
-  available: boolean;
-  verificationUri?: string;
-  deviceCode?: string;
-  expiresIn?: number;
-}
-
-export interface DeviceFlowPollResponse {
-  status: 'pending' | 'completed' | 'expired' | 'error';
-  clientId?: string;
-  clientSecret?: string;
-  message?: string;
-  config?: FeishuConfig;
-}
-
 // Auto Config types
 export interface AutoConfigStepResult {
   step: string;
@@ -141,13 +125,6 @@ export const feishuConfigApi = {
 
   listRoles: (): Promise<RoleDto[]> =>
     api.get<RoleDto[]>('/rbac/roles').then((r) => r.data),
-
-  // Device Flow
-  beginDeviceFlow: (): Promise<DeviceFlowBeginResponse> =>
-    api.post<DeviceFlowBeginResponse>('/feishu-config/device-flow/begin').then((r) => r.data),
-
-  pollDeviceFlow: (deviceCode: string): Promise<DeviceFlowPollResponse> =>
-    api.post<DeviceFlowPollResponse>('/feishu-config/device-flow/poll', { deviceCode }).then((r) => r.data),
 
   // Auto Configuration
   autoConfigure: (): Promise<AutoConfigResult> =>

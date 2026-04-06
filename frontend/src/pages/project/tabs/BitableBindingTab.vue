@@ -39,6 +39,7 @@ const saveError = ref('');
 
 // Dashboard
 const binding = ref<BitableBinding | null>(null);
+const bindingEmbedUrl = ref<string | null>(null);
 const syncTriggering = ref(false);
 const syncError = ref('');
 const deleteConfirmVisible = ref(false);
@@ -61,8 +62,9 @@ async function loadBinding() {
   loadError.value = '';
   try {
     const data = await bitableApi.getBinding(props.projectId);
-    if (data) {
-      binding.value = data;
+    if (data.binding) {
+      binding.value = data.binding;
+      bindingEmbedUrl.value = data.embedUrl;
       viewMode.value = 'dashboard';
     } else {
       viewMode.value = 'setup';
@@ -133,7 +135,10 @@ async function triggerSync() {
     await bitableApi.triggerSync(props.projectId);
     // Refresh binding to get updated sync status
     const updated = await bitableApi.getBinding(props.projectId);
-    if (updated) binding.value = updated;
+    if (updated.binding) {
+      binding.value = updated.binding;
+      bindingEmbedUrl.value = updated.embedUrl;
+    }
   } catch {
     syncError.value = '触发同步失败，请重试';
   } finally {
@@ -167,7 +172,7 @@ async function confirmDelete() {
 
 const feishuEmbedUrl = computed(() => {
   if (!binding.value) return '';
-  return getFeishuTableUrl(binding.value);
+  return getFeishuTableUrl(binding.value, bindingEmbedUrl.value);
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

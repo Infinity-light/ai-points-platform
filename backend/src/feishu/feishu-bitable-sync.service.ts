@@ -188,7 +188,7 @@ export class FeishuBitableSyncService {
 
         // Map known fields
         if (fieldDef.field_name === '工作任务') fieldMapping.title = fieldId;
-        else if (fieldDef.field_name === '执行人') fieldMapping.description = fieldId;
+        else if (fieldDef.field_name === '执行人') fieldMapping.assignees = fieldId;
         else if (fieldDef.field_name === '状态') fieldMapping.status = fieldId;
         else if (fieldDef.field_name === '工作成果说明') fieldMapping.description = fieldId;
         else if (fieldDef.field_name === '平台最终工分') writebackFieldId = fieldId;

@@ -20,6 +20,7 @@ const EVENT_SUBSCRIPTIONS = [
   'contact.department.created_v3',
   'contact.department.updated_v3',
   'contact.department.deleted_v3',
+  'drive.file.bitable_record_changed_v1',
 ];
 
 export interface ScopeStatus {
