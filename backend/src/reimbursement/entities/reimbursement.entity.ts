@@ -63,7 +63,7 @@ export class Reimbursement {
   @Column({ type: 'timestamp', nullable: true })
   paidAt!: Date | null;
 
-  @Column({ length: 200, nullable: true })
+  @Column({ type: 'varchar', length: 200, nullable: true })
   paymentReference!: string | null;
 
   @Column({ type: 'text', nullable: true })

@@ -77,10 +77,10 @@ export class Asset {
   @Column({ type: 'date', nullable: true })
   purchaseDate!: string | null;
 
-  @Column({ length: 200, nullable: true })
+  @Column({ type: 'varchar', length: 200, nullable: true })
   vendor!: string | null;
 
-  @Column({ length: 200, nullable: true })
+  @Column({ type: 'varchar', length: 200, nullable: true })
   serialNumber!: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
@@ -96,7 +96,7 @@ export class Asset {
   @Column({ type: 'jsonb', default: {} })
   metadata!: Record<string, unknown>;
 
-  @Column({ length: 200, nullable: true })
+  @Column({ type: 'varchar', length: 200, nullable: true })
   feishuRecordId!: string | null;
 
   @Column({ type: 'text', nullable: true })
