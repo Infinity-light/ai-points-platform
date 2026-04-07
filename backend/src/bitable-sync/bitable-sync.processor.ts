@@ -56,8 +56,8 @@ export class BitableSyncProcessor {
       binding.syncDirection === 'push_only'
         ? 'platform_to_feishu'
         : binding.syncDirection === 'pull_only'
-        ? 'feishu_to_platform'
-        : 'platform_to_feishu'; // bidirectional: push first, then pull
+          ? 'feishu_to_platform'
+          : 'platform_to_feishu'; // bidirectional: push first, then pull
 
     // Create sync log
     const syncLog = this.logRepo.create({
@@ -72,7 +72,7 @@ export class BitableSyncProcessor {
 
     let recordsCreated = 0;
     let recordsUpdated = 0;
-    let recordsFailed = 0;
+    const recordsFailed = 0;
 
     try {
       if (binding.syncDirection !== 'pull_only') {
@@ -113,9 +113,7 @@ export class BitableSyncProcessor {
   @Process('record-sync')
   async handleRecordSync(job: Job<RecordSyncJobData>): Promise<void> {
     const { bindingId, tenantId, recordId, eventId } = job.data;
-    this.logger.debug(
-      `[record-sync] 处理: bindingId=${bindingId}, recordId=${recordId}`,
-    );
+    this.logger.debug(`[record-sync] 处理: bindingId=${bindingId}, recordId=${recordId}`);
 
     const binding = await this.bindingRepo.findOne({ where: { id: bindingId, tenantId } });
     if (!binding) {
@@ -141,8 +139,9 @@ export class BitableSyncProcessor {
     await this.logRepo.save(syncLog);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = await this.feishuClientService.getClient(tenantId) as any;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const client = (await this.feishuClientService.getClient(tenantId)) as any;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       const res = await client.bitable.appTableRecord.get({
         path: {
           app_token: binding.appToken,
@@ -151,6 +150,7 @@ export class BitableSyncProcessor {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const fields: Record<string, unknown> = res?.data?.record?.fields ?? {};
       const convertedData = adapter.fromFeishuRecord(fields, binding.fieldMapping);
 
@@ -182,9 +182,7 @@ export class BitableSyncProcessor {
       syncLog.completedAt = new Date();
       await this.logRepo.save(syncLog);
 
-      this.logger.debug(
-        `[record-sync] 完成: bindingId=${bindingId}, recordId=${recordId}`,
-      );
+      this.logger.debug(`[record-sync] 完成: bindingId=${bindingId}, recordId=${recordId}`);
     } catch (err) {
       const errMsg = String(err);
       syncLog.status = 'failed';

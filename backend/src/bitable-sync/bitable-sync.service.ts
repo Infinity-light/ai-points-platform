@@ -4,7 +4,11 @@ import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { FeishuBitableBinding } from '../feishu/entities/feishu-bitable-binding.entity';
-import type { SyncDirection, ConflictStrategy, BitableFieldMapping } from '../feishu/entities/feishu-bitable-binding.entity';
+import type {
+  SyncDirection,
+  ConflictStrategy,
+  BitableFieldMapping,
+} from '../feishu/entities/feishu-bitable-binding.entity';
 import { BitableSyncLog } from './entities/bitable-sync-log.entity';
 import { BitableSyncRegistryService } from './bitable-sync-registry.service';
 import { BatchSyncerService } from './batch-syncer.service';
@@ -49,10 +53,7 @@ export class BitableSyncService {
 
   // ─── Binding CRUD ─────────────────────────────────────────────────────────────
 
-  async createBinding(
-    tenantId: string,
-    data: CreateBindingDto,
-  ): Promise<FeishuBitableBinding> {
+  async createBinding(tenantId: string, data: CreateBindingDto): Promise<FeishuBitableBinding> {
     const entityType = data.entityType ?? 'task';
 
     const binding = this.bindingRepo.create({
@@ -146,9 +147,7 @@ export class BitableSyncService {
     }
 
     if (binding.syncDirection === 'pull_only') {
-      this.logger.debug(
-        `pushEntity: binding ${binding.id} 为 pull_only，跳过 push`,
-      );
+      this.logger.debug(`pushEntity: binding ${binding.id} 为 pull_only，跳过 push`);
       return;
     }
 

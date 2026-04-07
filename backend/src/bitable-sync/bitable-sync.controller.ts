@@ -9,19 +9,16 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import {
-  IsString,
-  IsUUID,
-  IsNotEmpty,
-  IsOptional,
-  IsBoolean,
-  IsIn,
-} from 'class-validator';
+import { IsString, IsUUID, IsNotEmpty, IsOptional, IsBoolean, IsIn } from 'class-validator';
 import { PoliciesGuard } from '../rbac/policies.guard';
 import { CheckPolicies } from '../rbac/decorators/check-policies.decorator';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { BitableSyncService } from './bitable-sync.service';
-import type { SyncDirection, ConflictStrategy, BitableFieldMapping } from '../feishu/entities/feishu-bitable-binding.entity';
+import type {
+  SyncDirection,
+  ConflictStrategy,
+  BitableFieldMapping,
+} from '../feishu/entities/feishu-bitable-binding.entity';
 
 interface RequestWithUser extends Request {
   user: JwtPayload;

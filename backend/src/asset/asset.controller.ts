@@ -155,8 +155,16 @@ class UpdateAssetBodyDto {
 class ExecuteOperationBodyDto {
   @IsString()
   @IsIn([
-    'accept', 'assign', 'return', 'transfer', 'repair_start',
-    'repair_end', 'loan', 'loan_return', 'dispose', 'renew',
+    'accept',
+    'assign',
+    'return',
+    'transfer',
+    'repair_start',
+    'repair_end',
+    'loan',
+    'loan_return',
+    'dispose',
+    'renew',
   ])
   operationType!: string;
 

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -129,7 +124,8 @@ export class AssetService {
   }
 
   async findAll(tenantId: string, filters?: AssetFilters): Promise<Asset[]> {
-    const query = this.assetRepo.createQueryBuilder('asset')
+    const query = this.assetRepo
+      .createQueryBuilder('asset')
       .where('asset."tenantId" = :tenantId', { tenantId })
       .orderBy('asset."createdAt"', 'DESC');
 
@@ -143,7 +139,9 @@ export class AssetService {
       query.andWhere('asset.category = :category', { category: filters.category });
     }
     if (filters?.assignedUserId) {
-      query.andWhere('asset."assignedUserId" = :assignedUserId', { assignedUserId: filters.assignedUserId });
+      query.andWhere('asset."assignedUserId" = :assignedUserId', {
+        assignedUserId: filters.assignedUserId,
+      });
     }
 
     return query.getMany();
@@ -249,7 +247,9 @@ export class AssetService {
         }
       }
     } catch (err) {
-      this.logger.warn(`handleApprovalCompleted failed for asset ${event.businessId}: ${(err as Error).message}`);
+      this.logger.warn(
+        `handleApprovalCompleted failed for asset ${event.businessId}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -267,9 +267,7 @@ export class AssetService {
 
     const allowed = transitions[asset.status] ?? [];
     if (!allowed.includes(operationType)) {
-      throw new BadRequestException(
-        `资产状态 "${asset.status}" 不允许操作 "${operationType}"`,
-      );
+      throw new BadRequestException(`资产状态 "${asset.status}" 不允许操作 "${operationType}"`);
     }
   }
 
@@ -351,10 +349,7 @@ export class AssetService {
       (now.getFullYear() - purchaseDate.getFullYear()) * 12 +
       (now.getMonth() - purchaseDate.getMonth());
 
-    const accumulated = Math.min(
-      monthlyRate * Math.max(monthsElapsed, 0),
-      price - residual,
-    );
+    const accumulated = Math.min(monthlyRate * Math.max(monthsElapsed, 0), price - residual);
     const bookValue = Math.max(price - accumulated, residual);
 
     return {

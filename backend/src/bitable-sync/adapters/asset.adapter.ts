@@ -139,8 +139,7 @@ export class AssetBitableAdapter implements BitableSyncAdapter {
 
     if (fieldMapping['purchasePrice'] && fields[fieldMapping['purchasePrice']] !== undefined) {
       const price = fields[fieldMapping['purchasePrice']];
-      data['purchasePrice'] =
-        price !== null && price !== undefined ? Number(price) : null;
+      data['purchasePrice'] = price !== null && price !== undefined ? Number(price) : null;
     }
 
     return data;
@@ -179,8 +178,7 @@ export class AssetBitableAdapter implements BitableSyncAdapter {
       if (data['vendor'] !== undefined) asset.vendor = (data['vendor'] as string) || null;
       if (data['notes'] !== undefined) asset.notes = (data['notes'] as string) || null;
       if (data['purchasePrice'] !== undefined) {
-        asset.purchasePrice =
-          data['purchasePrice'] !== null ? Number(data['purchasePrice']) : null;
+        asset.purchasePrice = data['purchasePrice'] !== null ? Number(data['purchasePrice']) : null;
       }
       if (feishuRecordId && !asset.feishuRecordId) {
         asset.feishuRecordId = feishuRecordId;
@@ -218,29 +216,38 @@ export class AssetBitableAdapter implements BitableSyncAdapter {
 function extractTextValue(fieldValue: unknown): string {
   if (fieldValue === null || fieldValue === undefined) return '';
   if (typeof fieldValue === 'string') return fieldValue;
+  if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') return String(fieldValue);
   if (Array.isArray(fieldValue)) {
     return fieldValue
       .map((seg: unknown) => {
+        if (typeof seg === 'string') return seg;
+        if (typeof seg === 'number' || typeof seg === 'boolean') return String(seg);
         if (typeof seg === 'object' && seg !== null) {
-          return (seg as Record<string, unknown>)['text'] ?? '';
+          const text = (seg as Record<string, unknown>)['text'];
+          return typeof text === 'string' ? text : '';
         }
-        return String(seg);
+        return '';
       })
       .join('');
   }
   if (typeof fieldValue === 'object') {
     const obj = fieldValue as Record<string, unknown>;
-    if (obj['text'] !== undefined) return String(obj['text']);
+    const text = obj['text'];
+    if (typeof text === 'string') return text;
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
   }
-  return String(fieldValue);
+  return '';
 }
 
 function extractSelectValue(fieldValue: unknown): string {
   if (fieldValue === null || fieldValue === undefined) return '';
   if (typeof fieldValue === 'string') return fieldValue;
+  if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') return String(fieldValue);
   if (typeof fieldValue === 'object') {
     const obj = fieldValue as Record<string, unknown>;
-    if (obj['text'] !== undefined) return String(obj['text']);
+    const text = obj['text'];
+    if (typeof text === 'string') return text;
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
   }
-  return String(fieldValue);
+  return '';
 }

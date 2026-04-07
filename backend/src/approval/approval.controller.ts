@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/common';
 import {
   IsString,
   IsNotEmpty,
@@ -100,11 +92,7 @@ export class ApprovalController {
 
   @Post('instances/:id/approve')
   @CheckPolicies('approvals', 'approve')
-  approve(
-    @Request() req: RequestWithUser,
-    @Param('id') id: string,
-    @Body() dto: ApproveBodyDto,
-  ) {
+  approve(@Request() req: RequestWithUser, @Param('id') id: string, @Body() dto: ApproveBodyDto) {
     return this.approvalService.approve(id, req.user.sub, req.user.tenantId, {
       action: dto.action,
       comment: dto.comment,

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -226,7 +221,7 @@ export class ReimbursementService {
     return this.reimbursementRepo.save(reimbursement);
   }
 
-  async markComplete(id: string, tenantId: string, submitterId: string): Promise<Reimbursement> {
+  async markComplete(id: string, tenantId: string, _submitterId: string): Promise<Reimbursement> {
     const reimbursement = await this.findForMutation(id, tenantId);
 
     if (reimbursement.status !== 'paid') {

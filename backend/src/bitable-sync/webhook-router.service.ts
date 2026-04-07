@@ -46,9 +46,7 @@ export class WebhookRouterService {
         where: { bindingId: binding.id, feishuRecordId: recordId, lastEventId: eventId },
       });
       if (existing) {
-        this.logger.debug(
-          `enqueueRecordSync: 事件 ${eventId} 已处理，跳过 recordId=${recordId}`,
-        );
+        this.logger.debug(`enqueueRecordSync: 事件 ${eventId} 已处理，跳过 recordId=${recordId}`);
         return;
       }
     }
@@ -60,9 +58,7 @@ export class WebhookRouterService {
       eventId,
     });
 
-    this.logger.debug(
-      `enqueueRecordSync: 已入队 recordId=${recordId}, bindingId=${binding.id}`,
-    );
+    this.logger.debug(`enqueueRecordSync: 已入队 recordId=${recordId}, bindingId=${binding.id}`);
   }
 
   async routeWebhook(opts: {
@@ -85,9 +81,7 @@ export class WebhookRouterService {
     for (const binding of bindings) {
       // Ignore incoming webhooks for push-only bindings
       if (binding.syncDirection === 'push_only') {
-        this.logger.debug(
-          `routeWebhook: binding ${binding.id} 为 push_only，跳过 webhook 入队`,
-        );
+        this.logger.debug(`routeWebhook: binding ${binding.id} 为 push_only，跳过 webhook 入队`);
         continue;
       }
 
@@ -96,9 +90,7 @@ export class WebhookRouterService {
         try {
           await this.enqueueRecordSync(binding, tenantId, record.record_id, eventId);
         } catch (err) {
-          this.logger.error(
-            `routeWebhook: 入队失败 recordId=${record.record_id}, ${String(err)}`,
-          );
+          this.logger.error(`routeWebhook: 入队失败 recordId=${record.record_id}, ${String(err)}`);
         }
       }
     }

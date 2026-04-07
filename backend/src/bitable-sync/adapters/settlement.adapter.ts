@@ -68,8 +68,7 @@ export class SettlementBitableAdapter implements BitableSyncAdapter {
     }
 
     if (fieldMapping['totalPointsAwarded']) {
-      fields[fieldMapping['totalPointsAwarded']] =
-        settlement.summary?.totalPointsAwarded ?? 0;
+      fields[fieldMapping['totalPointsAwarded']] = settlement.summary?.totalPointsAwarded ?? 0;
     }
 
     if (fieldMapping['usersAffected']) {
@@ -109,7 +108,7 @@ export class SettlementBitableAdapter implements BitableSyncAdapter {
     return this.settlementRepo.find({ where: { tenantId, projectId } });
   }
 
-  async upsertFromFeishu(
+  upsertFromFeishu(
     _tenantId: string,
     _projectId: string,
     _data: Record<string, unknown>,

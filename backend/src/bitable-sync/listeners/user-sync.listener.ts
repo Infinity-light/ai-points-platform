@@ -9,21 +9,11 @@ export class UserBitableSyncListener {
   constructor(private readonly bitableSyncService: BitableSyncService) {}
 
   @OnEvent('user.updated')
-  async handleUserUpdated(event: {
-    user: { id: string };
-    tenantId: string;
-  }): Promise<void> {
+  async handleUserUpdated(event: { user: { id: string }; tenantId: string }): Promise<void> {
     try {
-      await this.bitableSyncService.pushEntity(
-        'user',
-        event.tenantId,
-        '',
-        event.user.id,
-      );
+      await this.bitableSyncService.pushEntity('user', event.tenantId, '', event.user.id);
     } catch (err) {
-      this.logger.error(
-        `用户信息同步失败 (非致命): userId=${event.user.id}, ${String(err)}`,
-      );
+      this.logger.error(`用户信息同步失败 (非致命): userId=${event.user.id}, ${String(err)}`);
     }
   }
 }

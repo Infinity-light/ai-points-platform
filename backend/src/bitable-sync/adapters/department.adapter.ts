@@ -138,19 +138,25 @@ export class DepartmentBitableAdapter implements BitableSyncAdapter {
 function extractTextValue(fieldValue: unknown): string {
   if (fieldValue === null || fieldValue === undefined) return '';
   if (typeof fieldValue === 'string') return fieldValue;
+  if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') return String(fieldValue);
   if (Array.isArray(fieldValue)) {
     return fieldValue
       .map((seg: unknown) => {
+        if (typeof seg === 'string') return seg;
+        if (typeof seg === 'number' || typeof seg === 'boolean') return String(seg);
         if (typeof seg === 'object' && seg !== null) {
-          return (seg as Record<string, unknown>)['text'] ?? '';
+          const text = (seg as Record<string, unknown>)['text'];
+          return typeof text === 'string' ? text : '';
         }
-        return String(seg);
+        return '';
       })
       .join('');
   }
   if (typeof fieldValue === 'object') {
     const obj = fieldValue as Record<string, unknown>;
-    if (obj['text'] !== undefined) return String(obj['text']);
+    const text = obj['text'];
+    if (typeof text === 'string') return text;
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
   }
-  return String(fieldValue);
+  return '';
 }

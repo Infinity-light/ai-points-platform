@@ -1,9 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  Index,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 export type SyncLogStatus = 'running' | 'completed' | 'failed';
 export type SyncLogType = 'full' | 'incremental' | 'push' | 'webhook';

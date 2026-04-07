@@ -4,7 +4,10 @@ import { Repository } from 'typeorm';
 import { FeishuBitableBinding } from '../feishu/entities/feishu-bitable-binding.entity';
 import { FeishuBitableRecord } from '../feishu/entities/feishu-bitable-record.entity';
 import { FeishuClientService } from '../feishu/feishu-client.service';
-import { BitableSyncRegistryService, type BitableSyncAdapter } from './bitable-sync-registry.service';
+import {
+  BitableSyncRegistryService,
+  type BitableSyncAdapter,
+} from './bitable-sync-registry.service';
 
 const RATE_LIMIT_MS = 200;
 const BATCH_SIZE = 500;
@@ -75,29 +78,32 @@ export class BatchSyncerService {
       return { created: 0, updated: 0, total: 0 };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = await this.feishuClientService.getClient(tenantId) as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const client = (await this.feishuClientService.getClient(tenantId)) as any;
     let created = 0;
     let updated = 0;
     let total = 0;
     let pageToken: string | undefined;
 
     do {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const listRes: any = await this.withRetry(() =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
         client.bitable.appTableRecord.list({
           path: { app_token: binding.appToken, table_id: binding.tableId },
           params: { page_size: 100, ...(pageToken ? { page_token: pageToken } : {}) },
         }),
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const records: any[] = listRes?.data?.items ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       pageToken = listRes?.data?.page_token as string | undefined;
 
       for (const record of records) {
         total++;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const recordId: string = record.record_id as string;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const fields: Record<string, unknown> = record.fields ?? {};
 
         try {
@@ -128,11 +134,7 @@ export class BatchSyncerService {
     return { created, updated, total };
   }
 
-  async pushOne(
-    binding: FeishuBitableBinding,
-    tenantId: string,
-    entityId: string,
-  ): Promise<void> {
+  async pushOne(binding: FeishuBitableBinding, tenantId: string, entityId: string): Promise<void> {
     const adapter = this.registry.get(binding.entityType);
     if (!adapter) {
       this.logger.warn(`pushOne: 未找到 adapter for entityType=${binding.entityType}`);
@@ -178,17 +180,18 @@ export class BatchSyncerService {
     entity: unknown,
     adapter: BitableSyncAdapter,
   ): Promise<'created' | 'updated'> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entityId: string = (entity as any).id as string;
+    const entityId: string = (entity as Record<string, unknown>).id as string;
     const fields = adapter.toFeishuRecord(entity, binding.fieldMapping);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = await this.feishuClientService.getClient(tenantId) as any;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const client = (await this.feishuClientService.getClient(tenantId)) as any;
 
     const existingRecord = await this.recordRepo.findOne({
       where: { bindingId: binding.id, entityId, entityType: binding.entityType },
     });
 
     if (existingRecord?.feishuRecordId) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       await client.bitable.appTableRecord.update({
         path: {
           app_token: binding.appToken,
@@ -202,12 +205,13 @@ export class BatchSyncerService {
       return 'updated';
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     const createRes: any = await client.bitable.appTableRecord.create({
       path: { app_token: binding.appToken, table_id: binding.tableId },
       data: { fields },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const newRecordId: string = createRes?.data?.record?.record_id ?? '';
     if (newRecordId) {
       await this.upsertBitableRecord({
@@ -234,7 +238,9 @@ export class BatchSyncerService {
         lastError = err;
         if (attempt < maxRetries) {
           const backoffMs = Math.pow(2, attempt - 1) * 500;
-          this.logger.warn(`withRetry: 第 ${attempt} 次失败，${backoffMs}ms 后重试 — ${String(err)}`);
+          this.logger.warn(
+            `withRetry: 第 ${attempt} 次失败，${backoffMs}ms 后重试 — ${String(err)}`,
+          );
           await this.delay(backoffMs);
         }
       }

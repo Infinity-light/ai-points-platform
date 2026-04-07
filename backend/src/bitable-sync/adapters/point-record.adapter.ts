@@ -101,7 +101,7 @@ export class PointRecordBitableAdapter implements BitableSyncAdapter {
     return this.pointRecordRepo.find({ where: { tenantId, projectId } });
   }
 
-  async upsertFromFeishu(
+  upsertFromFeishu(
     _tenantId: string,
     _projectId: string,
     _data: Record<string, unknown>,

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from '../../task/entities/task.entity';
@@ -28,9 +28,9 @@ const PRIORITY_TO_FEISHU: Record<string, string> = {
 };
 
 const FEISHU_TO_PRIORITY: Record<string, string> = {
-  '低': 'low',
-  '中': 'medium',
-  '高': 'high',
+  低: 'low',
+  中: 'medium',
+  高: 'high',
 };
 
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -90,7 +90,7 @@ export class TaskBitableAdapter implements BitableSyncAdapter {
     }
 
     if (fieldMapping['dueDate']) {
-      const deadline = task.metadata?.deadline as string | undefined;
+      const deadline = task.metadata?.deadline;
       if (deadline) {
         const d = new Date(deadline);
         if (!isNaN(d.getTime())) {
@@ -108,10 +108,7 @@ export class TaskBitableAdapter implements BitableSyncAdapter {
       fields[fieldMapping['aiScore']] = scores ? JSON.stringify(scores) : '';
     }
 
-    if (
-      fieldMapping['finalPoints'] &&
-      task.metadata?.finalPoints !== undefined
-    ) {
+    if (fieldMapping['finalPoints'] && task.metadata?.finalPoints !== undefined) {
       fields[fieldMapping['finalPoints']] = Number(task.metadata.finalPoints);
     }
 
@@ -237,29 +234,38 @@ export class TaskBitableAdapter implements BitableSyncAdapter {
 function extractTextValue(fieldValue: unknown): string {
   if (fieldValue === null || fieldValue === undefined) return '';
   if (typeof fieldValue === 'string') return fieldValue;
+  if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') return String(fieldValue);
   if (Array.isArray(fieldValue)) {
     return fieldValue
       .map((seg: unknown) => {
+        if (typeof seg === 'string') return seg;
+        if (typeof seg === 'number' || typeof seg === 'boolean') return String(seg);
         if (typeof seg === 'object' && seg !== null) {
-          return (seg as Record<string, unknown>)['text'] ?? '';
+          const text = (seg as Record<string, unknown>)['text'];
+          return typeof text === 'string' ? text : '';
         }
-        return String(seg);
+        return '';
       })
       .join('');
   }
   if (typeof fieldValue === 'object') {
     const obj = fieldValue as Record<string, unknown>;
-    if (obj['text'] !== undefined) return String(obj['text']);
+    const text = obj['text'];
+    if (typeof text === 'string') return text;
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
   }
-  return String(fieldValue);
+  return '';
 }
 
 function extractSelectValue(fieldValue: unknown): string {
   if (fieldValue === null || fieldValue === undefined) return '';
   if (typeof fieldValue === 'string') return fieldValue;
+  if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') return String(fieldValue);
   if (typeof fieldValue === 'object') {
     const obj = fieldValue as Record<string, unknown>;
-    if (obj['text'] !== undefined) return String(obj['text']);
+    const text = obj['text'];
+    if (typeof text === 'string') return text;
+    if (typeof text === 'number' || typeof text === 'boolean') return String(text);
   }
-  return String(fieldValue);
+  return '';
 }

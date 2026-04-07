@@ -52,7 +52,15 @@ class CreateReimbursementItemDto {
 class CreateReimbursementDto {
   @IsString()
   @IsNotEmpty()
-  @IsIn(['asset_purchase', 'travel', 'office_supply', 'training', 'software_license', 'cloud_service', 'other'])
+  @IsIn([
+    'asset_purchase',
+    'travel',
+    'office_supply',
+    'training',
+    'software_license',
+    'cloud_service',
+    'other',
+  ])
   reimbursementType!: ReimbursementType;
 
   @IsString()
@@ -156,11 +164,7 @@ export class ReimbursementController {
 
   @Post(':id/pay')
   @CheckPolicies('reimbursements', 'approve')
-  markPaid(
-    @Request() req: RequestWithUser,
-    @Param('id') id: string,
-    @Body() dto: MarkPaidDto,
-  ) {
+  markPaid(@Request() req: RequestWithUser, @Param('id') id: string, @Body() dto: MarkPaidDto) {
     return this.reimbursementService.markPaid(id, req.user.tenantId, dto);
   }
 

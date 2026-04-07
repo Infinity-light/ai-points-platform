@@ -21,9 +21,7 @@ export class TaskBitableSyncListener {
         event.task.id,
       );
     } catch (err) {
-      this.logger.error(
-        `任务创建同步失败 (非致命): taskId=${event.task.id}, ${String(err)}`,
-      );
+      this.logger.error(`任务创建同步失败 (非致命): taskId=${event.task.id}, ${String(err)}`);
     }
   }
 
@@ -40,9 +38,7 @@ export class TaskBitableSyncListener {
         event.task.id,
       );
     } catch (err) {
-      this.logger.error(
-        `任务更新同步失败 (非致命): taskId=${event.task.id}, ${String(err)}`,
-      );
+      this.logger.error(`任务更新同步失败 (非致命): taskId=${event.task.id}, ${String(err)}`);
     }
   }
 }

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -45,7 +40,9 @@ export class ApprovalService {
   ) {}
 
   async getConfig(tenantId: string, configType: string): Promise<ApprovalConfig | null> {
-    return this.configRepo.findOne({ where: { tenantId, configType: configType as ApprovalConfigType } });
+    return this.configRepo.findOne({
+      where: { tenantId, configType: configType as ApprovalConfigType },
+    });
   }
 
   async getAllConfigs(tenantId: string): Promise<ApprovalConfig[]> {
@@ -59,8 +56,14 @@ export class ApprovalService {
 
     if (existing) {
       existing.deptApproverMode = dto.deptApproverMode ?? existing.deptApproverMode;
-      existing.financePersonId = dto.financePersonId !== undefined ? (dto.financePersonId ?? null) : existing.financePersonId;
-      existing.finalApproverId = dto.finalApproverId !== undefined ? (dto.finalApproverId ?? null) : existing.finalApproverId;
+      existing.financePersonId =
+        dto.financePersonId !== undefined
+          ? (dto.financePersonId ?? null)
+          : existing.financePersonId;
+      existing.finalApproverId =
+        dto.finalApproverId !== undefined
+          ? (dto.finalApproverId ?? null)
+          : existing.finalApproverId;
       if (dto.isActive !== undefined) {
         existing.isActive = dto.isActive;
       }
@@ -298,9 +301,15 @@ export class ApprovalService {
         userId: opts.submitterId,
         tenantId: opts.tenantId,
         type: isApproved ? NotificationType.APPROVAL_COMPLETED : NotificationType.APPROVAL_REJECTED,
-        title: isApproved ? '您的申请已通过' : `您的申请已${opts.decision === 'returned' ? '退回' : '被拒绝'}`,
+        title: isApproved
+          ? '您的申请已通过'
+          : `您的申请已${opts.decision === 'returned' ? '退回' : '被拒绝'}`,
         content: `您提交的 ${opts.businessType} 申请审批结果：${opts.decision}`,
-        metadata: { instanceId: opts.instanceId, decision: opts.decision, businessType: opts.businessType },
+        metadata: {
+          instanceId: opts.instanceId,
+          decision: opts.decision,
+          businessType: opts.businessType,
+        },
       });
     } catch (err) {
       this.logger.warn(`Failed to notify submitter ${opts.submitterId}: ${(err as Error).message}`);

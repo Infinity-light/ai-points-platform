@@ -22,15 +22,21 @@ export class FieldMapperService {
       return null;
     }
 
+    const toStr = (v: unknown): string => {
+      if (typeof v === 'string') return v;
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      return '';
+    };
+
     switch (feishuFieldType) {
       case FEISHU_FIELD_TYPE.TEXT:
-        return [{ type: 'text', text: String(value) }];
+        return [{ type: 'text', text: toStr(value) }];
 
       case FEISHU_FIELD_TYPE.NUMBER:
         return typeof value === 'number' ? value : Number(value);
 
       case FEISHU_FIELD_TYPE.SINGLE_SELECT:
-        return String(value);
+        return toStr(value);
 
       case FEISHU_FIELD_TYPE.DATE: {
         // Feishu expects timestamp in milliseconds
@@ -47,16 +53,16 @@ export class FieldMapperService {
           return [{ id: value }];
         }
         if (Array.isArray(value)) {
-          return value.map((v) => (typeof v === 'string' ? { id: v } : v));
+          return value.map((v: unknown) => (typeof v === 'string' ? { id: v } : (v as object)));
         }
-        return [{ id: String(value) }];
+        return [{ id: toStr(value) }];
       }
 
       case FEISHU_FIELD_TYPE.PHONE:
-        return String(value);
+        return toStr(value);
 
       case FEISHU_FIELD_TYPE.URL: {
-        const url = String(value);
+        const url = toStr(value);
         return { link: url, text: url };
       }
 
@@ -73,6 +79,12 @@ export class FieldMapperService {
       return null;
     }
 
+    const toStr = (v: unknown): string => {
+      if (typeof v === 'string') return v;
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      return '';
+    };
+
     switch (feishuFieldType) {
       case FEISHU_FIELD_TYPE.TEXT:
         return this.extractText(fieldValue);
@@ -84,9 +96,12 @@ export class FieldMapperService {
         // Feishu returns single select as { text: string, id: string } or plain string
         if (typeof fieldValue === 'object' && fieldValue !== null) {
           const obj = fieldValue as Record<string, unknown>;
-          return obj.text ?? String(fieldValue);
+          const text = obj.text;
+          if (typeof text === 'string') return text;
+          if (typeof text === 'number' || typeof text === 'boolean') return String(text);
+          return '';
         }
-        return String(fieldValue);
+        return toStr(fieldValue);
       }
 
       case FEISHU_FIELD_TYPE.DATE:
@@ -101,7 +116,8 @@ export class FieldMapperService {
         if (Array.isArray(fieldValue)) {
           return fieldValue.map((p: unknown) => {
             if (typeof p === 'object' && p !== null) {
-              return (p as Record<string, unknown>).id ?? (p as Record<string, unknown>).name;
+              const rec = p as Record<string, unknown>;
+              return rec.id ?? rec.name;
             }
             return p;
           });
@@ -110,13 +126,15 @@ export class FieldMapperService {
       }
 
       case FEISHU_FIELD_TYPE.PHONE:
-        return String(fieldValue);
+        return toStr(fieldValue);
 
       case FEISHU_FIELD_TYPE.URL: {
         if (typeof fieldValue === 'object' && fieldValue !== null) {
-          return (fieldValue as Record<string, unknown>).link ?? String(fieldValue);
+          const link = (fieldValue as Record<string, unknown>).link;
+          if (typeof link === 'string') return link;
+          return '';
         }
-        return String(fieldValue);
+        return toStr(fieldValue);
       }
 
       default:
@@ -143,8 +161,10 @@ export class FieldMapperService {
       return fieldValue
         .map((segment: unknown) => {
           if (typeof segment === 'string') return segment;
+          if (typeof segment === 'number' || typeof segment === 'boolean') return String(segment);
           if (typeof segment === 'object' && segment !== null) {
-            return (segment as Record<string, unknown>).text ?? '';
+            const text = (segment as Record<string, unknown>).text;
+            return typeof text === 'string' ? text : '';
           }
           return '';
         })
@@ -152,9 +172,11 @@ export class FieldMapperService {
     }
     if (typeof fieldValue === 'object' && fieldValue !== null) {
       const obj = fieldValue as Record<string, unknown>;
-      if (obj.text !== undefined) return String(obj.text);
-      if (obj.link !== undefined) return String(obj.link);
+      if (typeof obj.text === 'string') return obj.text;
+      if (typeof obj.text === 'number' || typeof obj.text === 'boolean') return String(obj.text);
+      if (typeof obj.link === 'string') return obj.link;
+      if (typeof obj.link === 'number' || typeof obj.link === 'boolean') return String(obj.link);
     }
-    return String(fieldValue);
+    return '';
   }
 }

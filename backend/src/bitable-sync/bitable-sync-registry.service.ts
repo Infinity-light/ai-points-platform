@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { BitableFieldMapping, SyncDirection } from '../feishu/entities/feishu-bitable-binding.entity';
+import type {
+  BitableFieldMapping,
+  SyncDirection,
+} from '../feishu/entities/feishu-bitable-binding.entity';
 
 export interface FieldDefinition {
   feishuFieldName: string;
@@ -12,7 +15,10 @@ export interface BitableSyncAdapter {
   defaultSyncDirection: SyncDirection;
   getDefaultFieldMappings(): Record<string, FieldDefinition>;
   toFeishuRecord(entity: unknown, fieldMapping: BitableFieldMapping): Record<string, unknown>;
-  fromFeishuRecord(fields: Record<string, unknown>, fieldMapping: BitableFieldMapping): Record<string, unknown>;
+  fromFeishuRecord(
+    fields: Record<string, unknown>,
+    fieldMapping: BitableFieldMapping,
+  ): Record<string, unknown>;
   findEntity(tenantId: string, id: string): Promise<unknown>;
   findAllEntities(tenantId: string, projectId: string): Promise<unknown[]>;
   upsertFromFeishu(
