@@ -17,9 +17,11 @@ export interface BitableFieldMapping {
 }
 
 export type BitableSyncStatus = 'idle' | 'syncing' | 'error';
+export type SyncDirection = 'push_only' | 'pull_only' | 'bidirectional';
+export type ConflictStrategy = 'last_write_wins' | 'platform_wins' | 'feishu_wins';
 
 @Entity('feishu_bitable_bindings')
-@Index(['tenantId', 'projectId'], { unique: true })
+@Index(['tenantId', 'projectId', 'entityType'], { unique: true })
 export class FeishuBitableBinding {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -51,6 +53,20 @@ export class FeishuBitableBinding {
 
   @Column({ type: 'text', nullable: true })
   lastSyncError!: string | null;
+
+  // ─── New columns (migration 037) ─────────────────────────────────────────────
+
+  @Column({ type: 'varchar', length: 50, default: 'task' })
+  entityType!: string;
+
+  @Column({ type: 'varchar', length: 20, default: 'bidirectional' })
+  syncDirection!: SyncDirection;
+
+  @Column({ type: 'varchar', length: 20, default: 'last_write_wins' })
+  conflictStrategy!: ConflictStrategy;
+
+  @Column({ type: 'boolean', default: true })
+  isActive!: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;

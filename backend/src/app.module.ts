@@ -29,6 +29,10 @@ import { BulletinModule } from './bulletin/bulletin.module';
 import { AiConfigModule } from './ai-config/ai-config.module';
 import { DepartmentModule } from './department/department.module';
 import { FeishuModule } from './feishu/feishu.module';
+import { BitableSyncModule } from './bitable-sync/bitable-sync.module';
+import { ApprovalModule } from './approval/approval.module';
+import { AssetModule } from './asset/asset.module';
+import { ReimbursementModule } from './reimbursement/reimbursement.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
@@ -71,6 +75,10 @@ import feishuConfig from './config/feishu.config';
     AiConfigModule,
     DepartmentModule,
     FeishuModule,
+    BitableSyncModule,
+    ApprovalModule,
+    AssetModule,
+    ReimbursementModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

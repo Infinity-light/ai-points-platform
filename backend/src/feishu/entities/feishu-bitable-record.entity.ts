@@ -29,6 +29,17 @@ export class FeishuBitableRecord {
   @Column({ type: 'timestamp', nullable: true })
   lastSyncAt!: Date | null;
 
+  // ─── New columns (migration 037) ─────────────────────────────────────────────
+
+  @Column({ type: 'varchar', length: 50, default: 'task' })
+  entityType!: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  entityId!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  bitableUpdatedAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

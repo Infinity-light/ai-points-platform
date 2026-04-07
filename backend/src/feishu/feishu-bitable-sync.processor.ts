@@ -11,6 +11,12 @@ export interface BitableSyncJobData {
   tenantId: string;
 }
 
+/**
+ * @deprecated This processor uses the legacy FeishuBitableSyncService.fullSync() method.
+ * New full-sync jobs should be dispatched via BitableSyncService.triggerFullSync() and
+ * handled by BitableSyncProcessor in the bitable-sync module.
+ * This class will be removed in a future release.
+ */
 @Processor(QUEUE_NAMES.FEISHU_BITABLE_SYNC)
 export class FeishuBitableSyncProcessor {
   private readonly logger = new Logger(FeishuBitableSyncProcessor.name);

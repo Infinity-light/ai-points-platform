@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { FeishuSyncService } from './feishu-sync.service';
-import { FeishuBitableSyncService } from './feishu-bitable-sync.service';
+import { WebhookRouterService } from '../bitable-sync/webhook-router.service';
 
 interface FeishuWebhookPayload {
   tenantId: string;
@@ -15,7 +15,7 @@ export class FeishuWebhookListener {
 
   constructor(
     private readonly syncService: FeishuSyncService,
-    private readonly bitableSyncService: FeishuBitableSyncService,
+    private readonly webhookRouter: WebhookRouterService,
   ) {}
 
   @OnEvent('feishu.webhook')
@@ -34,29 +34,20 @@ export class FeishuWebhookListener {
         return;
       }
 
-      // Route to bitable sync for bitable/drive events
+      // Route to bitable sync via WebhookRouterService (generic multi-entity sync)
       if (eventType.includes('bitable') || eventType.includes('base')) {
         this.logger.log(`Bitable Webhook 事件: ${eventType}, tenantId=${tenantId}`);
-        // Extract record info from event payload and trigger incremental sync
-        // Feishu bitable record change event may look like:
-        // { header: { event_type: 'drive.file.bitable_record_changed_v1' }, event: { app_token, table_id, records: [...] } }
         const eventBody = (event.event ?? event) as Record<string, unknown>;
         const appToken = eventBody['app_token'] as string | undefined;
         const tableId = eventBody['table_id'] as string | undefined;
         const records = (eventBody['records'] as Array<{ record_id?: string }>) ?? [];
+        const eventId = (event.header as Record<string, unknown>)?.['event_id'] as string | undefined;
 
         if (appToken && tableId && records.length > 0) {
-          // Find binding by appToken + tableId
-          for (const record of records) {
-            if (!record.record_id) continue;
-            // Look up binding lazily — we don't have projectId here, search by appToken+tableId
-            // This is handled inside syncSingleRecord via binding lookup
-            this.logger.log(
-              `Bitable 增量同步: appToken=${appToken}, tableId=${tableId}, recordId=${record.record_id}`,
-            );
-            // We cannot look up bindingId without a projectId; trigger a search by appToken+tableId
-            await this.syncByAppTokenTableId(tenantId, appToken, tableId, record.record_id);
-          }
+          const validRecords = records
+            .filter((r) => r.record_id)
+            .map((r) => ({ record_id: r.record_id! }));
+          await this.webhookRouter.routeWebhook({ tenantId, appToken, tableId, records: validRecords, eventId });
         }
         return;
       }
@@ -67,21 +58,5 @@ export class FeishuWebhookListener {
         `飞书 Webhook 事件处理失败: ${eventType}, tenantId=${tenantId}, ${String(err)}`,
       );
     }
-  }
-
-  private async syncByAppTokenTableId(
-    tenantId: string,
-    appToken: string,
-    tableId: string,
-    recordId: string,
-  ): Promise<void> {
-    // Delegate single record sync using the service's internal lookup
-    // The service will find the binding by appToken + tableId + tenantId
-    await this.bitableSyncService.syncSingleRecordByTable(
-      tenantId,
-      appToken,
-      tableId,
-      recordId,
-    );
   }
 }

@@ -28,6 +28,10 @@ export type AppResource =
   | 'bulletin'
   | 'auctions'
   | 'feishu'
+  | 'assets'
+  | 'reimbursements'
+  | 'approvals'
+  | 'bitable-sync'
   | 'all';
 
 // 动作类型（字符串）

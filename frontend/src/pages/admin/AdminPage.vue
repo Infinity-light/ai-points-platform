@@ -66,6 +66,18 @@ const allTabs: TabDef[] = [
     permission: { resource: 'config', action: 'manage' },
     component: defineAsyncComponent(() => import('./tabs/PluginConfigTab.vue')),
   },
+  {
+    key: 'bitable-sync',
+    label: '飞书同步中心',
+    permission: { resource: 'bitable-sync', action: 'read' },
+    component: defineAsyncComponent(() => import('./tabs/BitableSyncTab.vue')),
+  },
+  {
+    key: 'approval-config',
+    label: '审批配置',
+    permission: { resource: 'approvals', action: 'manage' },
+    component: defineAsyncComponent(() => import('./tabs/ApprovalConfigTab.vue')),
+  },
 ];
 
 const visibleTabs = computed(() => {

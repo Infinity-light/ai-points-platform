@@ -215,6 +215,10 @@ export class FeishuBitableSyncService {
 
   // ─── Platform → Feishu Task Sync ─────────────────────────────────────────────
 
+  /**
+   * @deprecated Use BitableSyncService.pushEntity('task', tenantId, task.projectId, task.id) instead.
+   * This method will be removed in a future release.
+   */
   async syncTaskToFeishu(task: Task, tenantId: string): Promise<void> {
     const binding = await this.getBinding(task.projectId, tenantId);
     if (!binding) return;
@@ -323,6 +327,10 @@ export class FeishuBitableSyncService {
 
   // ─── Full Sync ───────────────────────────────────────────────────────────────
 
+  /**
+   * @deprecated Use BitableSyncService.triggerFullSync(bindingId, tenantId) instead.
+   * This method will be removed in a future release.
+   */
   async fullSync(
     bindingId: string,
     tenantId: string,
@@ -390,6 +398,10 @@ export class FeishuBitableSyncService {
 
   // ─── Single Record Sync (for webhook incremental updates) ───────────────────
 
+  /**
+   * @deprecated Use WebhookRouterService instead.
+   * This method will be removed in a future release.
+   */
   async syncSingleRecord(bindingId: string, tenantId: string, recordId: string): Promise<void> {
     const binding = await this.bindingRepo.findOne({ where: { id: bindingId } });
     if (!binding) {
@@ -417,6 +429,10 @@ export class FeishuBitableSyncService {
 
   // ─── Lookup by AppToken + TableId (for webhook listener) ────────────────────
 
+  /**
+   * @deprecated Use WebhookRouterService instead.
+   * This method will be removed in a future release.
+   */
   async syncSingleRecordByTable(
     tenantId: string,
     appToken: string,

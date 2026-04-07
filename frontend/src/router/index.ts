@@ -109,6 +109,31 @@ const routes: RouteRecordRaw[] = [
         name: 'Notifications',
         component: () => import('@/pages/NotificationPage.vue'),
       },
+      {
+        path: 'assets',
+        name: 'Assets',
+        component: () => import('@/pages/asset/AssetListPage.vue'),
+      },
+      {
+        path: 'assets/:id',
+        name: 'AssetDetail',
+        component: () => import('@/pages/asset/AssetDetailPage.vue'),
+      },
+      {
+        path: 'reimbursements',
+        name: 'Reimbursements',
+        component: () => import('@/pages/reimbursement/ReimbursementListPage.vue'),
+      },
+      {
+        path: 'reimbursements/create',
+        name: 'CreateReimbursement',
+        component: () => import('@/pages/reimbursement/CreateReimbursementPage.vue'),
+      },
+      {
+        path: 'reimbursements/:id',
+        name: 'ReimbursementDetail',
+        component: () => import('@/pages/reimbursement/ReimbursementDetailPage.vue'),
+      },
     ],
   },
 ];

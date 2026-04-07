@@ -27,6 +27,7 @@ import { RbacModule } from '../rbac/rbac.module';
 import { DepartmentModule } from '../department/department.module';
 import { AuthModule } from '../auth/auth.module';
 import { TaskModule } from '../task/task.module';
+import { BitableSyncModule } from '../bitable-sync/bitable-sync.module';
 import { QUEUE_NAMES } from '../queue/queue.constants';
 
 @Module({
@@ -47,6 +48,7 @@ import { QUEUE_NAMES } from '../queue/queue.constants';
     DepartmentModule,
     forwardRef(() => AuthModule),
     forwardRef(() => TaskModule),
+    forwardRef(() => BitableSyncModule),
   ],
   controllers: [FeishuConfigController, FeishuWebhookController, FeishuBitableController],
   providers: [

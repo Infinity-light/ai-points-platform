@@ -6,4 +6,7 @@ export const QUEUE_NAMES = {
   AUCTION_CLOSE: 'auction-close',
   FEISHU_SYNC: 'feishu-sync',
   FEISHU_BITABLE_SYNC: 'feishu-bitable-sync',
+  BITABLE_SYNC: 'bitable-sync',
+  ASSET_EXPIRY: 'asset-expiry',
+  APPROVAL: 'approval',
 } as const;

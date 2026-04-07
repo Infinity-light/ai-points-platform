@@ -86,6 +86,8 @@ import {
   Moon,
   MessageSquare,
   Bot,
+  Package,
+  Receipt,
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -93,6 +95,14 @@ const route = useRoute();
 const authStore = useAuthStore();
 const permissionStore = usePermissionStore();
 const themeStore = useThemeStore();
+
+const isAssetsVisible = computed(
+  () => permissionStore.loaded && permissionStore.can('read', 'assets'),
+);
+
+const isReimbursementsVisible = computed(
+  () => permissionStore.loaded && permissionStore.can('read', 'reimbursements'),
+);
 
 const isAdminVisible = computed(
   () =>
@@ -123,6 +133,12 @@ const navItems = computed(() => {
     { path: '/profile', label: '个人中心', icon: User },
     { path: '/notifications', label: '消息通知', icon: Bell },
   ];
+  if (isAssetsVisible.value) {
+    items.push({ path: '/assets', label: '资产管理', icon: Package });
+  }
+  if (isReimbursementsVisible.value) {
+    items.push({ path: '/reimbursements', label: '报销中心', icon: Receipt });
+  }
   if (isFeishuVisible.value) {
     items.push({ path: '/feishu-config', label: '飞书集成', icon: MessageSquare });
   }
